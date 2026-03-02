@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 import Speech
+import ApplicationServices
 
 // MARK: - 设置视图
 struct SettingsView: View {
@@ -185,15 +186,29 @@ struct PermissionStatusRow: View {
         }
         .onAppear {
             refreshStatus()
-            schedulePermissionRefresh()
+            startPermissionPolling()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshStatus()
-            schedulePermissionRefresh()
+            startPermissionPolling()
         }
     }
 
-    // 延迟刷新权限状态
+    // 使用 Timer 持续轮询权限状态
+    private func startPermissionPolling() {
+        var count = 0
+        let maxChecks = 20
+
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
+            self.refreshStatus()
+            count += 1
+            if count >= maxChecks || self.accessibilityGranted {
+                timer.invalidate()
+            }
+        }
+    }
+
+    // 旧方法保留用于手动刷新
     private func schedulePermissionRefresh() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             self.refreshStatus()
@@ -209,8 +224,14 @@ struct PermissionStatusRow: View {
     private func refreshStatus() {
         micGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
         speechGranted = SFSpeechRecognizer.authorizationStatus() == .authorized
+
         // 辅助功能权限检查
-        accessibilityGranted = AXIsProcessTrusted()
+        // 关键：对于 ad-hoc 签名的应用，TCC 数据库中的权限记录可能与当前签名不匹配
+        // 因此优先使用 prompt: true 强制系统重新检测权限状态
+        let promptOptions = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        accessibilityGranted = AXIsProcessTrustedWithOptions(promptOptions)
+
+        // 如果用户拒绝了对话框，再尝试不带弹窗的检查作为后备
         if !accessibilityGranted {
             let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false] as CFDictionary
             accessibilityGranted = AXIsProcessTrustedWithOptions(options)

@@ -80,27 +80,39 @@ struct OnboardingView: View {
         .frame(width: 520, height: 480)
         .onAppear {
             refreshPermissionStatus()
-            // 延迟刷新几次以确保获取到最新的权限状态
-            schedulePermissionRefresh()
+            // 启动持续轮询以确保获取到最新的权限状态
+            startPermissionPolling()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshPermissionStatus()
-            // 应用激活时也延迟刷新几次
-            schedulePermissionRefresh()
+            // 应用激活时重新启动轮询
+            startPermissionPolling()
         }
     }
 
-    // 延迟刷新权限状态，因为 macOS 可能需要一点时间更新权限缓存
+    // 使用 Timer 持续轮询权限状态，因为 macOS 权限更新可能有延迟
+    private func startPermissionPolling() {
+        // 每 0.5 秒检查一次，持续 10 秒
+        var count = 0
+        let maxChecks = 20
+
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
+            self.refreshPermissionStatus()
+            count += 1
+            if count >= maxChecks || self.accessibilityGranted {
+                timer.invalidate()
+            }
+        }
+    }
+
+    // 旧方法保留用于手动刷新
     private func schedulePermissionRefresh() {
-        // 0.5秒后刷新
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             self.refreshPermissionStatus()
         }
-        // 1秒后再次刷新
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             self.refreshPermissionStatus()
         }
-        // 2秒后再次刷新
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             self.refreshPermissionStatus()
         }
@@ -116,10 +128,14 @@ struct OnboardingView: View {
     private func refreshPermissionStatus() {
         micGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
         speechGranted = SFSpeechRecognizer.authorizationStatus() == .authorized
+
         // 辅助功能权限检查
-        // 优先使用 AXIsProcessTrusted() 获取最新状态
-        accessibilityGranted = AXIsProcessTrusted()
-        // 如果未授权，尝试带选项的检查（但不让系统弹窗）
+        // 关键：对于 ad-hoc 签名的应用，TCC 数据库中的权限记录可能与当前签名不匹配
+        // 因此优先使用 prompt: true 强制系统重新检测权限状态
+        let promptOptions = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        accessibilityGranted = AXIsProcessTrustedWithOptions(promptOptions)
+
+        // 如果用户拒绝了对话框（granted 为 false），再尝试不带弹窗的检查作为后备
         if !accessibilityGranted {
             let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false] as CFDictionary
             accessibilityGranted = AXIsProcessTrustedWithOptions(options)
@@ -221,7 +237,11 @@ struct PermissionStepView: View {
     private func refreshAllPermissions() {
         micGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
         speechGranted = SFSpeechRecognizer.authorizationStatus() == .authorized
-        accessibilityGranted = AXIsProcessTrusted()
+
+        // 辅助功能权限检查 - 同样使用强制检测
+        let promptOptions = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+        accessibilityGranted = AXIsProcessTrustedWithOptions(promptOptions)
+
         if !accessibilityGranted {
             let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false] as CFDictionary
             accessibilityGranted = AXIsProcessTrustedWithOptions(options)
