@@ -1,0 +1,17 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background: Apple-style squircle -->
+  <rect x="64" y="64" width="896" height="896" rx="200" fill="#007AFF"/>
+
+  <!-- Microphone body -->
+  <rect x="412" y="200" width="200" height="320" rx="100" fill="white"/>
+
+  <!-- Microphone stand arc -->
+  <path d="M312 480 Q312 640 512 640 Q712 640 712 480" stroke="white" stroke-width="48" stroke-linecap="round" fill="none"/>
+
+  <!-- Microphone stand base -->
+  <rect x="432" y="720" width="160" height="32" rx="16" fill="white"/>
+
+  <!-- Sound waves -->
+  <path d="M256 320 Q200 400 200 512 Q200 624 256 704" stroke="white" stroke-width="32" stroke-linecap="round" fill="none" opacity="0.8"/>
+  <path d="M768 320 Q824 400 824 512 Q824 624 768 704" stroke="white" stroke-width="32" stroke-linecap="round" fill="none" opacity="0.8"/>
+</svg>

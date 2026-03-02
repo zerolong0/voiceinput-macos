@@ -1,0 +1,98 @@
+name: VoiceInput
+options:
+  bundleIdPrefix: com.voiceinput
+  deploymentTarget:
+    macOS: "13.0"
+  xcodeVersion: "15.0"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+
+targets:
+  # 主应用程序 - 设置和配置
+  VoiceInput:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/App
+        type: group
+      - path: Sources/Shared
+        type: group
+      - path: Resources
+        type: group
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.voiceinput.macos
+        INFOPLIST_FILE: Sources/App/Info.plist
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: "NO"
+        COMBINE_HIDPI_IMAGES: "YES"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: "NO"
+        ENABLE_HARDENED_RUNTIME: "NO"
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+        OTHER_LDFLAGS:
+          - "-framework"
+          - "Cocoa"
+          - "-framework"
+          - "SwiftUI"
+          - "-framework"
+          - "Speech"
+          - "-framework"
+          - "AVFoundation"
+          - "-framework"
+          - "Carbon"
+
+  # 输入法 - 语音输入
+  VoiceInputIM:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/IM
+        type: group
+      - path: Sources/Shared
+        type: group
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.voiceinput.inputmethod
+        INFOPLIST_FILE: Sources/IM/Info.plist
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGNING_REQUIRED: "NO"
+        SKIP_INSTALL: "YES"
+        INSTALL_PATH: "$(HOME)/Library/Input Methods"
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
+        OTHER_LDFLAGS:
+          - "-framework"
+          - "InputMethodKit"
+          - "-framework"
+          - "Carbon"
+          - "-framework"
+          - "Cocoa"
+          - "-framework"
+          - "Speech"
+          - "-framework"
+          - "AVFoundation"
+        COMBINE_HIDPI_IMAGES: "YES"
+        GENERATE_INFOPLIST_FILE: "NO"
+        ENABLE_HARDENED_RUNTIME: "NO"
+
+schemes:
+  VoiceInput:
+    build:
+      targets:
+        VoiceInput: all
+        VoiceInputIM: all
+    run:
+      config: Debug
+    archive:
+      config: Release
