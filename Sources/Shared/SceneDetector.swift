@@ -31,7 +31,7 @@ enum AppScene: String, CaseIterable {
         switch self {
         case .email: return "email"
         case .chat: return "chat"
-        case .coding: return "concise"
+        case .coding: return "vibe_coding"
         case .vibeCoding: return "vibe_coding"
         case .social: return "social"
         case .formal: return "formal"
@@ -94,7 +94,11 @@ class SceneDetector {
                 "com.apple.Terminal",
                 "com.github.atom"
             ],
-            windowKeywords: ["terminal", "console", "terminal", "终端", "git"],
+            windowKeywords: [
+                "terminal", "console", "终端", "git",
+                "codex", "agent", "claude code", "autoglm",
+                "web coding", "frontend", "backend"
+            ],
             scene: .coding
         ),
         // Vibe Coding (代码相关网页)

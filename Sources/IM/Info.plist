@@ -30,6 +30,10 @@
     <string>VoiceInput_Connection</string>
     <key>InputMethodServerControllerClass</key>
     <string>VoiceInputController</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>VoiceInput 需要使用麦克风进行语音输入。</string>
+    <key>NSSpeechRecognitionUsageDescription</key>
+    <string>VoiceInput 需要使用语音识别将您的语音转换为文字。</string>
     <key>tsInputMethodIconFileKey</key>
     <string>VoiceInputIcon</string>
     <key>tsInputMethodCharacterRepertoireKey</key>

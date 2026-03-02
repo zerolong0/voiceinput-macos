@@ -13,11 +13,20 @@ import Carbon
 /// Handles text input and provides voice input functionality
 @objc(VoiceInputController)
 class VoiceInputController: IMKInputController {
+    private static var globalHotkeyRef: EventHotKeyRef?
+    private static var globalHandlerInstalled = false
+    private static weak var activeController: VoiceInputController?
 
     // MARK: - Properties
 
     /// Whether voice input is currently active
     private var isVoiceInputActive = false
+    private var hotkeyPressBeganAt: TimeInterval = 0
+    private var stopHandledOnPress = false
+    private var holdToStopThreshold: TimeInterval {
+        let value = SharedSettings.defaults.double(forKey: SharedSettings.Keys.hotkeyHoldToStopThreshold)
+        return min(1.2, max(0.15, value > 0 ? value : 0.35))
+    }
 
     /// The candidate window for displaying results
     private var candidateWindow: IMKCandidates?
@@ -25,19 +34,48 @@ class VoiceInputController: IMKInputController {
     /// Current recognized text
     private var currentText: String = ""
 
-    /// Global hotkey reference
-    private var hotkeyRef: EventHotKeyRef?
+    /// Speech and post-processing pipeline
+    private let whisperEngine = WhisperEngine()
+    private let textProcessor = TextProcessor()
+    private let polishClient = PolishClient()
+    private let statusPanel = InputStatusPanel()
+
+    private struct PendingCopyContext {
+        let originalText: String
+        let processedText: String
+        let finalText: String
+        let style: String
+    }
+    private var pendingCopyContext: PendingCopyContext?
 
     // MARK: - Initialization
 
     override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
         super.init(server: server, delegate: delegate, client: inputClient)
+        Self.activeController = self
+        SharedSettings.bootstrapDefaults()
+        whisperEngine.delegate = self
+        try? whisperEngine.loadModel(from: "")
+        statusPanel.onCopyRequested = { [weak self] in
+            self?.copyPendingTextToClipboard()
+        }
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(reloadHotkeyConfiguration),
+            name: Notification.Name(SharedNotifications.hotkeyChanged),
+            object: nil,
+            suspensionBehavior: .deliverImmediately
+        )
         setupCandidateWindow()
         setupGlobalHotkey()
     }
 
     deinit {
-        unregisterGlobalHotkey()
+        whisperEngine.stop()
+        DistributedNotificationCenter.default().removeObserver(self)
+        if Self.activeController === self {
+            Self.activeController = nil
+        }
     }
 
     // MARK: - Setup
@@ -49,77 +87,153 @@ class VoiceInputController: IMKInputController {
         candidateWindow?.setPanelType(kIMKSingleColumnScrollingCandidatePanel)
     }
 
-    /// Register global hotkey (Option + Space)
+    /// Register global hotkey (configured from shared settings)
     private func setupGlobalHotkey() {
-        // Register for Option+Space hotkey
-        // Using Carbon API for global hotkey registration
+        unregisterGlobalHotkey()
+
+        if !Self.globalHandlerInstalled {
+            installHotkeyHandler()
+            Self.globalHandlerInstalled = true
+        }
+
+        let defaults = SharedSettings.defaults
+        let imHotkeyEnabled = defaults.object(forKey: SharedSettings.Keys.imHotkeyEnabled) as? Bool ?? false
+        guard imHotkeyEnabled else { return }
+        let hotkeyEnabled = defaults.object(forKey: SharedSettings.Keys.hotkeyEnabled) as? Bool ?? true
+        guard hotkeyEnabled else {
+            updateHotkeyRuntimeStatus("已关闭")
+            return
+        }
+
         var hotKeyID = EventHotKeyID()
         hotKeyID.signature = OSType(0x564F4943) // "VOIC"
         hotKeyID.id = 1
 
-        var eventType = EventTypeSpec()
-        eventType.eventClass = OSType(kEventClassKeyboard)
-        eventType.eventKind = UInt32(kEventHotKeyPressed)
+        let rawModifiers = defaults.object(forKey: SharedSettings.Keys.hotkeyModifiers) as? Int ?? OptionSetFlag.optionSpaceModifiers.rawValue
+        let rawKeyCode = defaults.object(forKey: SharedSettings.Keys.hotkeyKeyCode) as? Int ?? OptionSetFlag.spaceKeyCode.rawValue
+        let validation = HotkeyConfig.validate(modifiers: rawModifiers, keyCode: rawKeyCode)
+        let useFallback = !validation.isValid
+        let modifiers = UInt32(useFallback ? OptionSetFlag.optionSpaceModifiers.rawValue : rawModifiers)
+        let keyCode = UInt32(useFallback ? OptionSetFlag.spaceKeyCode.rawValue : rawKeyCode)
 
-        // Install event handler
-        InstallEventHandler(
-            GetApplicationEventTarget(),
-            { (_, event, userData) -> OSStatus in
-                guard let userData = userData else { return OSStatus(eventNotHandledErr) }
-                let controller = Unmanaged<VoiceInputController>.fromOpaque(userData).takeUnretainedValue()
-                controller.handleHotkey()
-                return noErr
-            },
-            1,
-            &eventType,
-            Unmanaged.passUnretained(self).toOpaque(),
-            nil
-        )
-
-        // Register the hotkey: Option (kOptionKey) + Space (0x31)
-        let modifiers: UInt32 = UInt32(optionKey)
-        let keyCode: UInt32 = 0x31 // Space key
-
-        RegisterEventHotKey(
+        let status = RegisterEventHotKey(
             keyCode,
             modifiers,
             hotKeyID,
             GetApplicationEventTarget(),
             0,
-            &hotkeyRef
+            &Self.globalHotkeyRef
         )
+        if status != noErr {
+            NSLog("VoiceInput: Hotkey register failed status=\(status), fallback to Option+Space")
+            var fallbackRef: EventHotKeyRef?
+            let fallbackStatus = RegisterEventHotKey(
+                UInt32(OptionSetFlag.spaceKeyCode.rawValue),
+                UInt32(OptionSetFlag.optionSpaceModifiers.rawValue),
+                hotKeyID,
+                GetApplicationEventTarget(),
+                0,
+                &fallbackRef
+            )
+            if fallbackStatus == noErr {
+                Self.globalHotkeyRef = fallbackRef
+                updateHotkeyRuntimeStatus("回退注册成功: Option + Space")
+            } else {
+                NSLog("VoiceInput: Fallback hotkey register also failed status=\(fallbackStatus)")
+                updateHotkeyRuntimeStatus("注册失败: status=\(status), fallback=\(fallbackStatus)")
+            }
+        } else {
+            NSLog("VoiceInput: Hotkey registered modifiers=\(modifiers) keyCode=\(keyCode)")
+            updateHotkeyRuntimeStatus("已注册: \(HotkeyConfig.modifierTitle(for: Int(modifiers))) + \(HotkeyConfig.keyTitle(for: Int(keyCode)))")
+        }
+    }
+
+    private func installHotkeyHandler() {
+        var eventTypes = [
+            EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed)),
+            EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyReleased))
+        ]
+
+        InstallEventHandler(
+            GetApplicationEventTarget(),
+            { _, event, _ in
+                guard let event else { return noErr }
+                let kind = GetEventKind(event)
+                if kind == UInt32(kEventHotKeyPressed) {
+                    VoiceInputController.activeController?.handleHotkeyPressed()
+                } else if kind == UInt32(kEventHotKeyReleased) {
+                    VoiceInputController.activeController?.handleHotkeyReleased()
+                }
+                return noErr
+            },
+            Int(eventTypes.count),
+            &eventTypes,
+            nil,
+            nil
+        )
+    }
+
+    @objc private func reloadHotkeyConfiguration() {
+        setupGlobalHotkey()
     }
 
     /// Unregister global hotkey
     private func unregisterGlobalHotkey() {
-        if let hotkeyRef = hotkeyRef {
+        if let hotkeyRef = Self.globalHotkeyRef {
             UnregisterEventHotKey(hotkeyRef)
-            self.hotkeyRef = nil
+            Self.globalHotkeyRef = nil
         }
     }
 
-    /// Handle hotkey activation
-    private func handleHotkey() {
-        toggleVoiceInput()
+    private func updateHotkeyRuntimeStatus(_ status: String) {
+        let defaults = SharedSettings.defaults
+        defaults.set(status, forKey: SharedSettings.Keys.hotkeyRuntimeStatus)
+        DistributedNotificationCenter.default().postNotificationName(
+            Notification.Name(SharedNotifications.hotkeyChanged),
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
     }
 
-    /// Toggle voice input on/off
-    private func toggleVoiceInput() {
-        isVoiceInputActive.toggle()
+    /// Handle hotkey press
+    private func handleHotkeyPressed() {
+        hotkeyPressBeganAt = Date().timeIntervalSince1970
+        stopHandledOnPress = false
 
         if isVoiceInputActive {
-            activateVoiceInput()
-        } else {
+            stopHandledOnPress = true
+            deactivateVoiceInput()
+            return
+        }
+        activateVoiceInput()
+    }
+
+    /// Handle hotkey release
+    private func handleHotkeyReleased() {
+        let heldDuration = Date().timeIntervalSince1970 - hotkeyPressBeganAt
+        defer { stopHandledOnPress = false }
+        if isVoiceInputActive && !stopHandledOnPress && heldDuration >= holdToStopThreshold {
             deactivateVoiceInput()
         }
     }
 
     /// Activate voice input mode
     private func activateVoiceInput() {
-        // Notify user that voice input is active
         NSLog("VoiceInput: Activated")
+        currentText = ""
+        pendingCopyContext = nil
+        statusPanel.showListening(text: "")
 
-        // Show visual indicator - use candidates method
+        do {
+            try whisperEngine.start()
+        } catch {
+            NSLog("VoiceInput: start recognition failed: \(error.localizedDescription)")
+            isVoiceInputActive = false
+            statusPanel.showError("启动失败：\(error.localizedDescription)")
+            return
+        }
+
         candidateWindow?.update()
         candidateWindow?.show()
     }
@@ -128,17 +242,125 @@ class VoiceInputController: IMKInputController {
     private func deactivateVoiceInput() {
         NSLog("VoiceInput: Deactivated")
 
-        // Hide candidate window
+        whisperEngine.stop()
         candidateWindow?.hide()
 
-        // If there's recognized text, insert it
-        if !currentText.isEmpty {
-            insertText(currentText)
-        }
-
-        // Reset state
+        let capturedText = currentText
         currentText = ""
         isVoiceInputActive = false
+
+        guard !capturedText.isEmpty else { return }
+
+        // Always run local pipeline first so we have deterministic fallback.
+        let localProcessed = textProcessor.process(capturedText)
+        statusPanel.showThinking(text: localProcessed)
+
+        guard shouldUseLLM else {
+            deliverResult(
+                originalText: capturedText,
+                processedText: localProcessed,
+                finalText: localProcessed,
+                style: effectiveStyle(),
+                note: "local_only"
+            )
+            return
+        }
+
+        let style = effectiveStyle()
+        let baseURL = SharedSettings.defaults.string(forKey: SharedSettings.Keys.llmAPIBaseURL) ?? "https://oneapi.gemiaude.com/v1"
+        let apiKey = SharedSettings.defaults.string(forKey: SharedSettings.Keys.llmAPIKey) ?? ""
+        let model = SharedSettings.defaults.string(forKey: SharedSettings.Keys.llmModel) ?? "gemini-2.5-flash-lite"
+        statusPanel.showThinking(text: localProcessed)
+
+        Task {
+            do {
+                let polished = try await polishClient.polish(
+                    text: localProcessed,
+                    style: style,
+                    model: model,
+                    baseURL: baseURL,
+                    apiKey: apiKey
+                )
+                DispatchQueue.main.async {
+                    let finalText = polished.isEmpty ? localProcessed : polished
+                    self.deliverResult(
+                        originalText: capturedText,
+                        processedText: localProcessed,
+                        finalText: finalText,
+                        style: style,
+                        note: "llm_success"
+                    )
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.deliverResult(
+                        originalText: capturedText,
+                        processedText: localProcessed,
+                        finalText: localProcessed,
+                        style: style,
+                        note: "llm_fallback:\(error.localizedDescription)"
+                    )
+                }
+            }
+        }
+    }
+
+    private func deliverResult(
+        originalText: String,
+        processedText: String,
+        finalText: String,
+        style: String,
+        note: String
+    ) {
+        if insertText(finalText) {
+            statusPanel.hide()
+            InputHistoryStore.shared.append(
+                InputHistoryItem(
+                    originalText: originalText,
+                    processedText: processedText,
+                    finalText: finalText,
+                    style: style,
+                    status: .inserted,
+                    note: note
+                )
+            )
+            pendingCopyContext = nil
+            return
+        }
+
+        pendingCopyContext = PendingCopyContext(
+            originalText: originalText,
+            processedText: processedText,
+            finalText: finalText,
+            style: style
+        )
+        statusPanel.update(
+            status: "未检测到输入焦点。请点击“复制内容”后手动粘贴，避免消息丢失。",
+            text: finalText,
+            showCopy: true
+        )
+        InputHistoryStore.shared.append(
+            InputHistoryItem(
+                originalText: originalText,
+                processedText: processedText,
+                finalText: finalText,
+                style: style,
+                status: .pendingCopy,
+                note: note + "|no_focus"
+            )
+        )
+    }
+
+    private var shouldUseLLM: Bool {
+        SharedSettings.defaults.object(forKey: SharedSettings.Keys.llmEnabled) as? Bool ?? false
+    }
+
+    private func effectiveStyle() -> String {
+        let selected = SharedSettings.defaults.string(forKey: SharedSettings.Keys.selectedStyle) ?? "default"
+        if selected == "default" {
+            return SceneDetector.shared.detectCurrentScene().apiStyle
+        }
+        return selected
     }
 
     // MARK: - IMKInputController Overrides
@@ -147,6 +369,8 @@ class VoiceInputController: IMKInputController {
     override func activateServer(_ sender: Any!) {
         super.activateServer(sender)
         NSLog("VoiceInput: Server activated")
+        Self.activeController = self
+        setupGlobalHotkey()
     }
 
     /// Called when the input method is deactivated
@@ -154,16 +378,16 @@ class VoiceInputController: IMKInputController {
         super.deactivateServer(sender)
         NSLog("VoiceInput: Server deactivated")
 
-        // Clean up
         candidateWindow?.hide()
+        statusPanel.hide()
         isVoiceInputActive = false
+        whisperEngine.stop()
     }
 
     /// Handle input events
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
         guard let event = event else { return false }
 
-        // Handle key events
         if event.type == .keyDown {
             return handleKeyDown(event, client: sender)
         }
@@ -178,9 +402,11 @@ class VoiceInputController: IMKInputController {
         // Escape to cancel voice input
         if keyCode == 53 { // Escape key
             if isVoiceInputActive {
-                isVoiceInputActive = false
+                whisperEngine.stop()
                 currentText = ""
+                isVoiceInputActive = false
                 candidateWindow?.hide()
+                statusPanel.hide()
                 return true
             }
         }
@@ -188,17 +414,13 @@ class VoiceInputController: IMKInputController {
         // Enter to confirm input
         if keyCode == 36 { // Return key
             if isVoiceInputActive && !currentText.isEmpty {
-                insertText(currentText)
-                currentText = ""
-                isVoiceInputActive = false
-                candidateWindow?.hide()
+                deactivateVoiceInput()
                 return true
             }
         }
 
         // Space to complete current input in non-voice mode
         if keyCode == 49 && !isVoiceInputActive { // Space key
-            // Insert space if we have text
             if let client = sender as? IMKTextInput {
                 client.insertText(" ", replacementRange: NSRange(location: NSNotFound, length: 0))
                 return true
@@ -212,14 +434,12 @@ class VoiceInputController: IMKInputController {
     override func menu() -> NSMenu! {
         let menu = NSMenu(title: "VoiceInput")
 
-        // About item
         let aboutItem = NSMenuItem(title: "About VoiceInput", action: #selector(showAbout), keyEquivalent: "")
         aboutItem.target = self
         menu.addItem(aboutItem)
 
         menu.addItem(NSMenuItem.separator())
 
-        // Preferences item
         let prefsItem = NSMenuItem(title: "Preferences...", action: #selector(showPrefs), keyEquivalent: ",")
         prefsItem.target = self
         menu.addItem(prefsItem)
@@ -230,9 +450,28 @@ class VoiceInputController: IMKInputController {
     // MARK: - Text Insertion
 
     /// Insert text into the client application
-    private func insertText(_ text: String) {
-        guard let client = self.client() as? IMKTextInput else { return }
+    private func insertText(_ text: String) -> Bool {
+        guard let client = self.client() as? IMKTextInput else { return false }
         client.insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))
+        return true
+    }
+
+    private func copyPendingTextToClipboard() {
+        guard let context = pendingCopyContext else { return }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(context.finalText, forType: .string)
+        statusPanel.update(status: "内容已复制。请回到目标输入框粘贴。", text: context.finalText, showCopy: true)
+        InputHistoryStore.shared.append(
+            InputHistoryItem(
+                originalText: context.originalText,
+                processedText: context.processedText,
+                finalText: context.finalText,
+                style: context.style,
+                status: .copied,
+                note: "manual_copy"
+            )
+        )
     }
 
     // MARK: - Menu Actions
@@ -247,7 +486,32 @@ class VoiceInputController: IMKInputController {
     }
 
     @objc private func showPrefs() {
-        // Preferences would be implemented here
         NSLog("VoiceInput: Preferences requested")
+    }
+}
+
+extension VoiceInputController: WhisperEngineDelegate {
+    func whisperEngineDidStart(_ engine: WhisperEngine) {
+        NSLog("VoiceInput: Recognition started")
+    }
+
+    func whisperEngineDidStop(_ engine: WhisperEngine) {
+        NSLog("VoiceInput: Recognition stopped")
+    }
+
+    func whisperEngine(_ engine: WhisperEngine, didTranscribe result: TranscriptionResult) {
+        currentText = result.text
+    }
+
+    func whisperEngine(_ engine: WhisperEngine, didUpdatePartialResult text: String) {
+        currentText = text
+        statusPanel.showListening(text: text)
+    }
+
+    func whisperEngine(_ engine: WhisperEngine, didFailWithError error: WhisperError) {
+        NSLog("VoiceInput: Recognition error: \(error.localizedDescription)")
+        isVoiceInputActive = false
+        candidateWindow?.hide()
+        statusPanel.showError("识别失败：\(error.localizedDescription)")
     }
 }
