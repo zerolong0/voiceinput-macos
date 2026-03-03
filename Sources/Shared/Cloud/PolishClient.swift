@@ -42,6 +42,7 @@ enum PolishClientError: Error {
     case badStatus(Int)
     case decodeFailed
     case promptLeakDetected
+    case contentDriftDetected
 }
 
 final class PolishClient {
@@ -139,45 +140,35 @@ final class PolishClient {
 
     private func systemPrompt(for style: String) -> String {
         let baseRules = """
-        任务：把用户输入改写为更清晰、可执行的文本。
-
-        强约束：
-        1. 只允许重写、纠错、重排。禁止新增用户未提及的信息。
-        2. 禁止添加角色设定、身份描述、背景故事、解释性前后缀。
-        3. 禁止脑补功能、步骤、验收标准、风险项；除非原文已明确提到。
-        4. 保留原始意图、约束、数字、专有名词。
-        5. 修正常见错别字和不规范术语，不改变业务含义。
-        6. 仅输出最终改写结果，不输出任何说明。
-        7. 不使用星号、井号、反引号、方括号等特殊结构化符号。
-        8. 不得扩写成新的需求清单、功能拆解或实施方案；除非原文已经给出这些结构。
-        9. 输出长度默认不超过原文约 1.25 倍；若原文很短，只做必要纠错与术语规范。
-        10. 若原文已清晰，优先最小改动；可直接返回轻微纠错后的原句。
-
-        结构规则：
-        1. 如果原文是列表/分点，保持分点并优化语序。
-        2. 如果原文是自然句子，输出为简洁段落，不强行套模板。
+        只改写用户输入，不做扩写。
+        只允许纠错、语序优化、术语规范。
+        禁止新增原文未提及的信息、步骤、方案、角色、验收、风险、里程碑。
+        保留原始意图、约束、数字、专有名词。
+        原文是分点就保持分点；原文是自然句就保持自然句。
+        原文已清晰时仅做最小改动。
+        不得反问用户，不得要求用户补充文本。
+        不输出解释、标题、前后缀。
+        禁止输出：改写后、优化后、根据你的、作为、我将、下面是。
+        禁止输出符号：* # ` [ ]。
+        仅输出最终改写文本。
         """
 
         switch style {
         case "vibe_coding", "technical":
             return """
             \(baseRules)
-            场景补充：
-            1. 偏向 Web Coding 语境做术语校正，例如 prompt、onboarding、frontend、backend、API。
-            2. 不新增任何未给出的技术方案。
-            3. 不自动补充“角色设定”“验收标准”“风险评估”“里程碑”等模板化段落。
+            Web Coding 术语规范：
+            仅在不改变原意的前提下，纠正为 prompt、onboarding、frontend、backend、API。
             """
         case "formal", "email":
             return """
             \(baseRules)
-            场景补充：
-            语气正式、礼貌、明确，但不新增原文没有的承诺或计划。
+            保持正式、礼貌、明确，但不得新增原文没有的承诺或计划。
             """
         case "casual", "chat":
             return """
             \(baseRules)
-            场景补充：
-            口语化、自然、简洁，不夸张，不添加额外信息。
+            保持口语化、自然、简洁，不夸张，不添加额外信息。
             """
         default:
             return """
@@ -196,6 +187,18 @@ final class PolishClient {
             throw PolishClientError.promptLeakDetected
         }
 
+        if hasForbiddenFormatting(text: out) {
+            throw PolishClientError.contentDriftDetected
+        }
+
+        if isLengthTooLong(original: original, output: out) {
+            throw PolishClientError.contentDriftDetected
+        }
+
+        if isSemanticDrift(original: original, output: out) {
+            throw PolishClientError.contentDriftDetected
+        }
+
         if out.isEmpty {
             throw PolishClientError.decodeFailed
         }
@@ -206,7 +209,8 @@ final class PolishClient {
     private func isPromptLeak(text: String) -> Bool {
         let hitTerms = [
             "强约束", "结构规则", "场景补充", "仅允许重写", "不得扩写",
-            "不自动补充", "任务：把用户输入改写", "你是", "system prompt"
+            "不自动补充", "任务：把用户输入改写", "system prompt",
+            "你是文本改写器", "只输出改写后的正文"
         ]
         let hitCount = hitTerms.reduce(0) { partial, term in
             partial + (text.localizedCaseInsensitiveContains(term) ? 1 : 0)
@@ -218,5 +222,61 @@ final class PolishClient {
             return true
         }
         return false
+    }
+
+    private func hasForbiddenFormatting(text: String) -> Bool {
+        let forbiddenPrefixTerms = [
+            "改写后", "优化后", "根据你的", "作为", "我将", "下面是",
+            "请提供需要改写", "请提供要改写", "请提供需要优化", "请提供文本"
+        ]
+        if forbiddenPrefixTerms.contains(where: { text.hasPrefix($0) }) {
+            return true
+        }
+        if text.contains("*") || text.contains("#") || text.contains("`") || text.contains("[") || text.contains("]") {
+            return true
+        }
+        return false
+    }
+
+    private func isLengthTooLong(original: String, output: String) -> Bool {
+        guard !original.isEmpty else { return false }
+        let ratio = Double(output.count) / Double(original.count)
+        if original.count <= 12 {
+            return ratio > 1.8
+        }
+        return ratio > 1.35
+    }
+
+    private func isSemanticDrift(original: String, output: String) -> Bool {
+        let sourceTokens = Set(extractSemanticTokens(from: original))
+        guard sourceTokens.count >= 2 else { return false }
+
+        let outputLower = output.lowercased()
+        let overlap = sourceTokens.filter { token in
+            outputLower.contains(token.lowercased())
+        }.count
+        let overlapRatio = Double(overlap) / Double(sourceTokens.count)
+        return overlapRatio < 0.22
+    }
+
+    private func extractSemanticTokens(from text: String) -> [String] {
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        let patterns = [
+            "[A-Za-z][A-Za-z0-9_\\-\\.]{1,}",
+            "[\\u4e00-\\u9fff]{2,}"
+        ]
+        var tokens: [String] = []
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
+            let matches = regex.matches(in: text, range: range)
+            for match in matches {
+                guard let r = Range(match.range, in: text) else { continue }
+                let token = String(text[r]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if token.count >= 2 {
+                    tokens.append(token)
+                }
+            }
+        }
+        return Array(Set(tokens)).prefix(20).map { String($0) }
     }
 }

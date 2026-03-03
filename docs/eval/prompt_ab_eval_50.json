@@ -1,0 +1,646 @@
+[
+  {
+    "id": 1,
+    "input": "把首页改一下，左边菜单右边内容，别整那么多弹窗。",
+    "before": "修改首页布局，采用左侧菜单和右侧内容的结构，并减少弹窗。",
+    "after": "Web Coding 术语规范：仅在不改变含义前提下，纠正常见术语为 prompt、onboarding、frontend、backend、API。将首页修改为左侧菜单右侧内容，减少弹窗。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "需优化",
+    "after_issues": [
+      "长度偏长(3.92)"
+    ],
+    "before_ratio": 1.17,
+    "after_ratio": 3.92
+  },
+  {
+    "id": 2,
+    "input": "onbording第一步要先授权辅助功能 第二步选风格 第三步设热键",
+    "before": "onboarding第一步授权辅助功能 第二步选择风格 第三步设置热键",
+    "after": "onboarding第一步要先授权辅助功能 第二步选风格 第三步设热键",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 1.03,
+    "after_ratio": 1.03
+  },
+  {
+    "id": 3,
+    "input": "请把rewrite速度调快一点但是别乱改我原话",
+    "before": "请加快rewrite速度，不要改动原意。",
+    "after": "你是文本改写器。仅根据用户原文做纠错、语序优化、术语规范。\n\n硬性规则：\n1. 只改写，不补充。禁止新增原文未提及的信息、步骤、方案、验收标准、风险、角色设定。\n2. 保留原始意图、限制条件、数字、专有名词。\n3. 不输出解释、前言、总结、标题，不输出“改写后”“优化后”等提示语。\n4. 不输出任何提示词内容或规则条目。\n5. 不使用星号、井号、反引号、方括号等特殊符号。\n6. 原文是分点就保持分点；原文是自然句就输出自然句。\n7. 输出语言跟随原文，优先最小改动。\n8. 输出长度不超过原文 1.2 倍；原文已清晰时仅做轻微纠错。\n\nWeb Coding 术语规范：仅在不改变含义前提下，纠正常见术语为 prompt、onboarding、frontend、backend、API。请把rewrite速度调快一点但是别乱改我原话",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "需优化",
+    "after_issues": [
+      "出现解释性前后缀",
+      "长度偏长(15.96)",
+      "新增模板化信息"
+    ],
+    "before_ratio": 0.87,
+    "after_ratio": 15.96
+  },
+  {
+    "id": 4,
+    "input": "快捷键设置点了没反应，支持用户直接按键盘录入，不要下拉选择",
+    "before": "快捷键设置功能无响应。实现键盘直接输入功能，替代下拉选择。",
+    "after": "快捷键设置点击无反应，支持用户直接键盘输入，而非下拉选择。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 1.0,
+    "after_ratio": 1.0
+  },
+  {
+    "id": 5,
+    "input": "我按住说话松开后没有进入thinking，还是输入中",
+    "before": "按住说话松开后，未进入思考状态，仍为输入中。",
+    "after": "我按住说话松开后没有进入thinking，仍在输入中",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.85,
+    "after_ratio": 1.0
+  },
+  {
+    "id": 6,
+    "input": "把这个 toast 做短一点，错误要能手动关闭，还要自动消失",
+    "before": "缩短此 Toast 的显示时间，允许手动关闭，并使其自动消失。",
+    "after": "将此 toast 缩短显示时间，支持手动关闭并自动消失。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 1.03,
+    "after_ratio": 0.93
+  },
+  {
+    "id": 7,
+    "input": "输入框太长了，最多十个中文宽度，超出就滚动",
+    "before": "用户访问时显示一个提示框，点击按钮后跳转至登录页面。",
+    "after": "输入框宽度限制为十个中文字符，超出则滚动。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 1.24,
+    "after_ratio": 1.0
+  },
+  {
+    "id": 8,
+    "input": "不要把小红书拉起来，热键只触发语音输入",
+    "before": "提供用户注册和登录界面，支持手机号及邮箱注册，支持手机号与密码登录，并包含忘记密码功能。",
+    "after": "Web Coding 术语规范：仅在不改变含义前提下，纠正常见术语为 prompt、onboarding、frontend、backend、API。不要提及小红书，热键只触发语音输入。",
+    "before_level": "需优化",
+    "before_issues": [
+      "长度偏长(2.32)"
+    ],
+    "after_level": "需优化",
+    "after_issues": [
+      "长度偏长(4.84)"
+    ],
+    "before_ratio": 2.32,
+    "after_ratio": 4.84
+  },
+  {
+    "id": 9,
+    "input": "授权状态老是脏数据，重编译后要清理再重新申请",
+    "before": "授权状态数据无效，重新编译后需要先清理再重新申请。",
+    "after": "授权状态经常出现脏数据，重编译后需要先清理再重新申请。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 1.14,
+    "after_ratio": 1.23
+  },
+  {
+    "id": 10,
+    "input": "请你把模型切到 gemini-2.5-flash-lite",
+    "before": "请提供需要改写的用户输入。",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.45,
+    "after_ratio": 0.31
+  },
+  {
+    "id": 11,
+    "input": "历史记录最多保留100条，要能看原文和改写并复制",
+    "before": "请提供需要改写的用户输入。",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.54,
+    "after_ratio": 0.38
+  },
+  {
+    "id": 12,
+    "input": "没有焦点时别丢消息，提示用户复制后手动粘贴",
+    "before": "请提供需要改写的用户输入文本。",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.71,
+    "after_ratio": 0.43
+  },
+  {
+    "id": 13,
+    "input": "thinking阶段只要AI图标，不要显示思考中三个字",
+    "before": "好的，请提供需要改写的用户输入。",
+    "after": "好的，我明白了。请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.59,
+    "after_ratio": 0.52
+  },
+  {
+    "id": 14,
+    "input": "错误提示现在太宽了，限制最大宽度，图标文字对齐",
+    "before": "限制错误提示的最大宽度，并对齐图标与文字。",
+    "after": "错误提示现在太宽，限制最大宽度，并对齐图标文字。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.91,
+    "after_ratio": 1.04
+  },
+  {
+    "id": 15,
+    "input": "准备中这个状态条宽度要跟文字自适应，不要占满整行",
+    "before": "状态条的宽度应随文字内容自适应，不撑满整行。",
+    "after": "请确保 frontend 和 backend 之间的 API 调用符合规范。\n该功能处于准备中状态，其状态条宽度需与文字自适应，避免占满整行。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "需优化",
+    "after_issues": [
+      "长度偏长(2.96)"
+    ],
+    "before_ratio": 0.92,
+    "after_ratio": 2.96
+  },
+  {
+    "id": 16,
+    "input": "把输入中的图标改成声波动画，不要转圈loading",
+    "before": "将图标改为声波动画，移除转圈加载。",
+    "after": "请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.68,
+    "after_ratio": 0.24
+  },
+  {
+    "id": 17,
+    "input": "我希望初始状态输入框里显示‘请开始说话’文字提示",
+    "before": "初始状态输入框显示‘请开始说话’。",
+    "after": "我希望初始状态输入框里显示‘请开始说话’文字提示",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [
+      "未改写(可接受但需人工确认)"
+    ],
+    "before_ratio": 0.71,
+    "after_ratio": 1.0
+  },
+  {
+    "id": 18,
+    "input": "有文本后就替换为实时文本，单行显示，不换行",
+    "before": "实现用户登录功能，支持邮箱和密码登录，并集成微信和QQ第三方登录。",
+    "after": "好的，请提供原文。",
+    "before_level": "需优化",
+    "before_issues": [
+      "长度偏长(1.57)"
+    ],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 1.57,
+    "after_ratio": 0.43
+  },
+  {
+    "id": 19,
+    "input": "onboarding和主界面窗口尺寸要统一",
+    "before": "统一 onboarding 和主界面的窗口尺寸",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 1.1,
+    "after_ratio": 0.43
+  },
+  {
+    "id": 20,
+    "input": "onboarding要做成每步单屏，不要把信息堆在一个页面",
+    "before": "Onboarding流程实现为每步单屏，避免将信息集中在一个页面。",
+    "after": "onboarding要做成每步单屏，不要把信息堆在一个页面",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [
+      "未改写(可接受但需人工确认)"
+    ],
+    "before_ratio": 1.14,
+    "after_ratio": 1.0
+  },
+  {
+    "id": 21,
+    "input": "辅助功能授权要单独一步，而且写清楚重启要求",
+    "before": "好的，请提供需要改写的用户输入。",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.76,
+    "after_ratio": 0.43
+  },
+  {
+    "id": 22,
+    "input": "权限异常文案要更短更清楚，别吓人",
+    "before": "好的，请提供需要改写的用户输入。",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 1.0,
+    "after_ratio": 0.56
+  },
+  {
+    "id": 23,
+    "input": "启动后请直接可用，不要每次都让我重新配权限",
+    "before": "任务：将用户输入改写为更清晰、可执行的文本。\n\n核心约束：\n重写、纠错、重排。禁止新增用户未提及的信息。\n禁止添加角色设定、身份描述、背景故事、解释性前后缀。\n禁止脑补功能、步骤、验收标准、风险项，除非原文已明确提到。\n保留原始意图、约束、数字、专有名词。\n修正常见错别字和不规范术语，不改变业务含义。\n仅输出最终改写结果，不输出任何说明。\n不使用星号、井号、反引号、方括号等特殊结构化符号。\n不得扩写成新的需求清单、功能拆解或实施方案，除非原文已经给出这些结构。\n输出长度默认不超过原文约 1.25 倍；若原文很短，只做必要纠错与术语规范。\n若原文已清晰，优先最小改动；可直接返回轻微纠错后的原句。\n\n结构规则：\n如果原文是列表或分点，保持分点格式并优化语序。\n如果原文是自然句子，输出为简洁段落，不强行套模板。\n\n场景补充：\n偏向 Web Coding 语境做术语校正，例如 prompt、onboarding、frontend、backend、API。\n不新增任何未给出的技术方案。\n不自动补充角色设定、验收标准、风险评估、里程碑等模板化段落。\n启动后请直接可用，无需每次重新配置权限。",
+    "after": "好的，我已经准备好了。请提供原文。",
+    "before_level": "需优化",
+    "before_issues": [
+      "疑似提示词泄露",
+      "长度偏长(23.62)",
+      "新增模板化信息"
+    ],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 23.62,
+    "after_ratio": 0.81
+  },
+  {
+    "id": 24,
+    "input": "现在改写会自己加角色身份，这个要禁止",
+    "before": "请提供需要改写的用户输入文本。",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.83,
+    "after_ratio": 0.5
+  },
+  {
+    "id": 25,
+    "input": "不要输出星号井号这些格式符号",
+    "before": "用户输入需要被改写为更清晰、可执行的文本。\n\n改写规则：\n1.  仅允许重写、纠错、重排，禁止新增用户未提及的信息。\n2.  禁止添加角色设定、身份描述、背景故事、解释性前后缀。\n3.  禁止脑补功能、步骤、验收标准、风险项，除非原文已明确提及。\n4.  保留原始意图、约束、数字、专有名词。\n5.  修正常见错别字和不规范术语，不改变业务含义。例如，将“前端”、“后端”、“接口”、“提示”、“用户”等术语规范化。\n6.  仅输出最终改写结果，不输出任何说明性文字。\n7.  输出结果不使用星号、井号、反引号、方括号等特殊结构化符号。\n8.  不得扩写成新的需求清单、功能拆解或实施方案，除非原文已包含这些结构。\n9.  输出长度原则上不超过原文的1.25倍。原文很短时，仅做必要纠错与术语规范。\n10. 如果原文已清晰，优先进行最小改动，可直接返回轻微纠错后的原句。\n\n结构化处理：\n1.  原文为列表或分点时，保持分点形式并优化语序。\n2.  原文为自然句子时，输出为简洁段落，不强制套用模板。\n\n场景补充：\n1.  术语校正偏向 Web Coding 语境，如 prompt、onboarding、frontend、backend、API 等。\n2.  不新增未在原文中给出的技术方案。\n3.  不自动补充“角色设定”、“验收标准”、“风险评估”、“里程碑”等模板化段落。",
+    "after": "好的，请提供原文。",
+    "before_level": "需优化",
+    "before_issues": [
+      "疑似提示词泄露",
+      "长度偏长(42.14)",
+      "新增模板化信息"
+    ],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 42.14,
+    "after_ratio": 0.64
+  },
+  {
+    "id": 26,
+    "input": "如果原文已经清楚就别大改，最多修错别字",
+    "before": "好的，请提供需要改写的用户输入。",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.84,
+    "after_ratio": 0.47
+  },
+  {
+    "id": 27,
+    "input": "把web coding里常用词纠正下，比如front end改frontend",
+    "before": "请提供需要改写的用户输入。",
+    "after": "把web coding里常用词纠正下，比如frontend改frontend",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.33,
+    "after_ratio": 0.97
+  },
+  {
+    "id": 28,
+    "input": "把后端接口地址写法统一成API endpoint",
+    "before": "用户首次访问时，执行新手引导流程。",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.71,
+    "after_ratio": 0.38
+  },
+  {
+    "id": 29,
+    "input": "请把这句话润色下：你说你是谁我操现在都想好了",
+    "before": "你说你是谁？现在我全想好了。",
+    "after": "你说你是谁，现在都想好了。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.64,
+    "after_ratio": 0.59
+  },
+  {
+    "id": 30,
+    "input": "我说的是做一个输入条，不是做一个大面板",
+    "before": "创建输入框，不是大面板。",
+    "after": "我说的是做一个输入条，不是做大面板。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.63,
+    "after_ratio": 0.95
+  },
+  {
+    "id": 31,
+    "input": "停止输入后应立即进入改写，进度条先快后慢到99",
+    "before": "请提供需要改写的用户输入。",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.57,
+    "after_ratio": 0.39
+  },
+  {
+    "id": 32,
+    "input": "完成后瞬间100并发送，不要停在结果展示",
+    "before": "好的，请提供用户输入。",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.55,
+    "after_ratio": 0.45
+  },
+  {
+    "id": 33,
+    "input": "发送成功不需要显示改写结果，直接消失",
+    "before": "创建用户注册页面。",
+    "after": "好的。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.5,
+    "after_ratio": 0.17
+  },
+  {
+    "id": 34,
+    "input": "如果改写失败，回退本地文本并给可关闭错误提示",
+    "before": "好的，请提供需要改写的用户输入。",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.73,
+    "after_ratio": 0.41
+  },
+  {
+    "id": 35,
+    "input": "把快捷键冲突校验做上，默认拒绝高冲突组合",
+    "before": "实现快捷键冲突校验，默认拒绝高冲突组合。",
+    "after": "请提供需要改写的原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 1.0,
+    "after_ratio": 0.55
+  },
+  {
+    "id": 36,
+    "input": "支持单键和双键组合，不要限制用户",
+    "before": "支持单键和双键组合。不限制用户。",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 1.0,
+    "after_ratio": 0.56
+  },
+  {
+    "id": 37,
+    "input": "设置页里不要再放输入记录入口，历史记录已有",
+    "before": "设置页面移除输入记录入口，历史记录已有。",
+    "after": "设置页里不要再放输入记录入口，历史记录已有",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [
+      "未改写(可接受但需人工确认)"
+    ],
+    "before_ratio": 0.95,
+    "after_ratio": 1.0
+  },
+  {
+    "id": 38,
+    "input": "登录后页面采用左侧菜单+右侧面板布局",
+    "before": "用户登录成功后，跳转至主页。主页采用左侧导航栏和右侧内容区的布局。",
+    "after": "好的，请提供原文。",
+    "before_level": "需优化",
+    "before_issues": [
+      "长度偏长(1.83)"
+    ],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 1.83,
+    "after_ratio": 0.5
+  },
+  {
+    "id": 39,
+    "input": "首页、实时输入、历史记录、设置都要可点可用",
+    "before": "首页、实时输入、历史记录、设置都要可点击且可用。",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 1.14,
+    "after_ratio": 0.43
+  },
+  {
+    "id": 40,
+    "input": "图标简化，只保留线条动画，去掉旁边文字",
+    "before": "前端页面接收用户输入信息，用户提交后，后端处理数据并返回结果，前端展示结果。",
+    "after": "好的，请提供原文。",
+    "before_level": "需优化",
+    "before_issues": [
+      "长度偏长(2.00)"
+    ],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 2.0,
+    "after_ratio": 0.47
+  },
+  {
+    "id": 41,
+    "input": "状态反馈改成‘⚙️ 优化中’",
+    "before": "⚙️ 优化中",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.43,
+    "after_ratio": 0.64
+  },
+  {
+    "id": 42,
+    "input": "别用语音播报开始说话，文字提示就够了",
+    "before": "好的，请提供需要改写的用户输入。",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.89,
+    "after_ratio": 0.5
+  },
+  {
+    "id": 43,
+    "input": "输入中声音滴一下后仍显示输入中，这是状态机bug",
+    "before": "音频输入完成后，输入状态仍显示为输入中，这是状态机的一个bug。",
+    "after": "输入时发出提示音后，仍显示输入中，这是状态机bug",
+    "before_level": "需优化",
+    "before_issues": [
+      "长度偏长(1.33)"
+    ],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 1.33,
+    "after_ratio": 1.04
+  },
+  {
+    "id": 44,
+    "input": "修复崩溃：主线程按钮点击触发EXC_BAD_ACCESS",
+    "before": "修复主线程按钮点击触发EXC_BAD_ACCESS崩溃",
+    "after": "修复主线程按钮点击触发EXC_BAD_ACCESS崩溃",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.96,
+    "after_ratio": 0.96
+  },
+  {
+    "id": 45,
+    "input": "把安装版签名固定，不要每次身份变导致权限失效",
+    "before": "固定安装版签名，避免因身份变更导致权限失效。",
+    "after": "仅在不改变含义前提下，纠正常见术语为 prompt、onboarding、frontend、backend、API。固定安装版签名，避免每次身份变更导致权限失效。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "需优化",
+    "after_issues": [
+      "长度偏长(3.68)"
+    ],
+    "before_ratio": 1.0,
+    "after_ratio": 3.68
+  },
+  {
+    "id": 46,
+    "input": "Xcode里打开后先跑build再跑相关测试",
+    "before": "在 Xcode 中打开项目，先执行构建，然后运行相关测试。",
+    "after": "Xcode里打开后先运行build再运行相关测试",
+    "before_level": "需优化",
+    "before_issues": [
+      "长度偏长(1.32)"
+    ],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 1.32,
+    "after_ratio": 1.09
+  },
+  {
+    "id": 47,
+    "input": "这个需求保持原句，别扩写：支持修改快捷键",
+    "before": "支持修改快捷键",
+    "after": "支持修改快捷键",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.35,
+    "after_ratio": 0.35
+  },
+  {
+    "id": 48,
+    "input": "把输入框位置放在屏幕中下，不要右上角",
+    "before": "将输入框放置在屏幕中下区域，避免放置在右上角。",
+    "after": "把输入框位置放在屏幕中下，不要右上角",
+    "before_level": "需优化",
+    "before_issues": [
+      "长度偏长(1.28)"
+    ],
+    "after_level": "通过",
+    "after_issues": [
+      "未改写(可接受但需人工确认)"
+    ],
+    "before_ratio": 1.28,
+    "after_ratio": 1.0
+  },
+  {
+    "id": 49,
+    "input": "全屏场景下也要显示输入条，避免被窗口遮挡",
+    "before": "全屏场景下，确保输入条可见且不被窗口遮挡。",
+    "after": "全屏场景下也要显示输入条，避免被窗口遮挡",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [
+      "未改写(可接受但需人工确认)"
+    ],
+    "before_ratio": 1.05,
+    "after_ratio": 1.0
+  },
+  {
+    "id": 50,
+    "input": "如果用户取消输入，给轻提示后自动收起",
+    "before": "好的，请提供需要改写的用户输入。",
+    "after": "好的，请提供原文。",
+    "before_level": "通过",
+    "before_issues": [],
+    "after_level": "通过",
+    "after_issues": [],
+    "before_ratio": 0.89,
+    "after_ratio": 0.5
+  }
+]

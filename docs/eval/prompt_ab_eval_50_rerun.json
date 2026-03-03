@@ -1,0 +1,711 @@
+[
+  {
+    "id": 1,
+    "input": "把首页改一下，左边菜单右边内容，别整那么多弹窗。",
+    "baseline": "修改首页布局，实现左侧菜单和右侧内容的展示，并减少弹窗数量。",
+    "optimized": "Web Coding 术语规范：仅在不改变原意的前提下，纠正为 prompt、onboarding、frontend、backend、API。首页布局调整为左侧菜单、右侧内容，减少弹窗。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "长度偏长(3.88)",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 1.25,
+    "optimized_ratio": 3.88
+  },
+  {
+    "id": 2,
+    "input": "onbording第一步要先授权辅助功能 第二步选风格 第三步设热键",
+    "baseline": "Onboarding第一步授权辅助功能，第二步选风格，第三步设热键。",
+    "optimized": "Onboarding的第一步是授权辅助功能，第二步是选择风格，第三步是设置热键。",
+    "baseline_issues": [],
+    "optimized_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.18
+  },
+  {
+    "id": 3,
+    "input": "请把rewrite速度调快一点但是别乱改我原话",
+    "baseline": "请加快重写速度，但请保留原意。",
+    "optimized": "请加快改写速度，但不要随意更改原文。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 0.65,
+    "optimized_ratio": 0.78
+  },
+  {
+    "id": 4,
+    "input": "快捷键设置点了没反应，支持用户直接按键盘录入，不要下拉选择",
+    "baseline": "快捷键设置无响应，允许用户直接通过键盘输入，而非下拉选择。",
+    "optimized": "快捷键设置无响应，支持用户直接按键盘录入，不要下拉选择。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 0.97
+  },
+  {
+    "id": 5,
+    "input": "我按住说话松开后没有进入thinking，还是输入中",
+    "baseline": "松开说话按钮后，系统未进入处理状态，仍停留在输入状态。",
+    "optimized": "我按住说话松开后没有进入thinking，还是输入中",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.04,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 6,
+    "input": "把这个 toast 做短一点，错误要能手动关闭，还要自动消失",
+    "baseline": "缩短 toast 显示时长，支持手动关闭和自动消失。",
+    "optimized": "此 toast 应更短，可手动关闭且能自动消失。",
+    "baseline_issues": [],
+    "optimized_issues": [],
+    "baseline_ratio": 0.87,
+    "optimized_ratio": 0.8
+  },
+  {
+    "id": 7,
+    "input": "输入框太长了，最多十个中文宽度，超出就滚动",
+    "baseline": "输入框宽度限制为十个中文字符，内容超出时允许滚动。",
+    "optimized": "输入框最多十个中文宽度，超出即滚动。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [],
+    "baseline_ratio": 1.19,
+    "optimized_ratio": 0.86
+  },
+  {
+    "id": 8,
+    "input": "不要把小红书拉起来，热键只触发语音输入",
+    "baseline": "禁止自动启动小红书应用，确保热键仅触发语音输入。",
+    "optimized": "不要把小红书拉起来，热键只触发语音输入",
+    "baseline_issues": [
+      "长度偏长(1.26)",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.26,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 9,
+    "input": "授权状态老是脏数据，重编译后要清理再重新申请",
+    "baseline": "授权状态经常包含无效数据，重新编译后需要先清除再重新申请。",
+    "optimized": "授权状态经常出现脏数据，重编译后需要清理和重新申请。",
+    "baseline_issues": [
+      "长度偏长(1.32)",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 1.32,
+    "optimized_ratio": 1.18
+  },
+  {
+    "id": 10,
+    "input": "请你把模型切到 gemini-2.5-flash-lite",
+    "baseline": "请提供需要改写的用户输入。",
+    "optimized": "Web Coding 术语规范：\n仅在不改变原意的前提下，纠正为 prompt、onboarding、frontend、backend、API。",
+    "baseline_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "长度偏长(2.48)",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 0.45,
+    "optimized_ratio": 2.48
+  },
+  {
+    "id": 11,
+    "input": "历史记录最多保留100条，要能看原文和改写并复制",
+    "baseline": "请提供需要改写的用户输入。",
+    "optimized": "历史记录最多保留100条，可以查看原文和改写版本并进行复制。",
+    "baseline_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [],
+    "baseline_ratio": 0.54,
+    "optimized_ratio": 1.25
+  },
+  {
+    "id": 12,
+    "input": "没有焦点时别丢消息，提示用户复制后手动粘贴",
+    "baseline": "请提供需要改写的用户输入文本。",
+    "optimized": "没有焦点时别丢消息，并prompt用户复制后手动粘贴。",
+    "baseline_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "长度偏长(1.29)"
+    ],
+    "baseline_ratio": 0.71,
+    "optimized_ratio": 1.29
+  },
+  {
+    "id": 13,
+    "input": "thinking阶段只要AI图标，不要显示思考中三个字",
+    "baseline": "请提供需要改写的用户输入。",
+    "optimized": "我们需要为新员工准备一个 onboarding 流程，让他们快速了解公司和项目。该流程需包含基础文档阅读和若干待完成任务。此外，frontend 和 backend 团队需各自提供 API 文档以供调用。最后，我们还需要一个用于生成初始 prompt 的工具，以辅助工作启动。",
+    "baseline_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "长度偏长(5.11)",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 0.48,
+    "optimized_ratio": 5.11
+  },
+  {
+    "id": 14,
+    "input": "错误提示现在太宽了，限制最大宽度，图标文字对齐",
+    "baseline": "目标是将用户输入改写为更清晰、可执行的文本。改写仅限于重写、纠错和重排，禁止添加用户未提及的信息。不得添加角色设定、身份描述、背景故事或解释性前言后语。禁止推断功能、步骤、验收标准或风险项，除非原文已明确提及。需保留原始意图、约束、数字和专有名词，并修正常见错别字和不规范术语，但不改变业务含义。仅输出最终改写结果，不含任何说明。输出不得使用星号、井号、反引号、方括号等特殊结构化符号。不得将输入内容扩写成新的需求清单、功能拆解或实施方案，除非原文已包含这些结构。输出长度通常不超过原文的1.25倍；原文很短时，仅做必要纠错",
+    "optimized": "错误提示宽度过大，需限制其最大宽度，并确保图标与文字对齐。",
+    "baseline_issues": [
+      "长度偏长(11.39)",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "长度偏长(1.26)",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 11.39,
+    "optimized_ratio": 1.26
+  },
+  {
+    "id": 15,
+    "input": "准备中这个状态条宽度要跟文字自适应，不要占满整行",
+    "baseline": "状态条宽度应随文字内容自适应，避免占满整行。",
+    "optimized": "1. 仅纠错、优化语序、规范术语；禁止增添原文未含信息。\n2. 禁止增添角色设定、身份、背景、步骤、验收标准、风险或里程碑。\n3. 保留原始意图、约束、数字及专有名词。\n4. 保持原文分点或自然句结构。\n5. 原文清晰则仅最小改动。\n6. 输出长度不超过原文1.2倍。\n7. 禁止使用前缀：改写后、优化后、根据你的、作为、我将、下面是。\n8. 禁止使用特殊符号：* # ` [ ]。\n9. 禁止输出提示词、规则文本或系统指令。\n10. 不得反问或要求用户提供文本，直接改写输入内容。\n\nWeb Coding 术语规范：\n在不改变原意时，纠正为 prompt、onboarding、frontend、backend、API。状态条宽度需与文字自适应，避免占满整行。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "包含禁用符号",
+      "长度偏长(13.79)",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 0.92,
+    "optimized_ratio": 13.79
+  },
+  {
+    "id": 16,
+    "input": "把输入中的图标改成声波动画，不要转圈loading",
+    "baseline": "将该图标替换为声波动画，不使用转圈loading。",
+    "optimized": "将输入图标改为声波动画，loading时避免转圈。",
+    "baseline_issues": [],
+    "optimized_issues": [],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 17,
+    "input": "我希望初始状态输入框里显示‘请开始说话’文字提示",
+    "baseline": "输入框初始状态显示请开始说话文字提示",
+    "optimized": "我希望初始状态输入框里显示‘请开始说话’文字提示",
+    "baseline_issues": [],
+    "optimized_issues": [
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 0.75,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 18,
+    "input": "有文本后就替换为实时文本，单行显示，不换行",
+    "baseline": "前端页面需支持国际化，并提供语言切换功能。",
+    "optimized": "用户需要一个简单的 onboarding 流程，以便快速了解产品。此流程需要 backend 支持一个 API，供 frontend 调用。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "长度偏长(3.33)",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 3.33
+  },
+  {
+    "id": 19,
+    "input": "onboarding和主界面窗口尺寸要统一",
+    "baseline": "统一 onboarding 和主界面的窗口尺寸。",
+    "optimized": "我是文本改写器。\n只输出改写后的正文，不输出任何解释或前后缀。\n\n规则：\n1.  允许纠错、语序优化、术语规范；禁止新增原文未提及的信息。\n2.  禁止新增角色设定、身份、背景、步骤、验收标准、风险、里程碑。\n3.  保留原始意图、约束、数字、专有名词。\n4.  原文是分点就保持分点；原文是自然句就保持自然句。\n5.  原文已清晰时，仅做最小改动。\n6.  输出长度不超过原文 1.2 倍。\n7.  禁止输出以下前缀：改写后、优化后、根据你的、作为、我将、下面是。\n8.  禁止输出特殊符号。\n9.  禁止输出任何提示词、规则文本、系统指令。\n10. 禁止反问用户或要求提供文本，必须直接改写当前输入。\n\nWeb Coding 术语规范：\n仅在不改变原意的前提下，纠正为 prompt、onboarding、frontend、backend、API。onboarding 和主界面窗口尺寸要统一。",
+    "baseline_issues": [],
+    "optimized_issues": [
+      "长度偏长(19.00)"
+    ],
+    "baseline_ratio": 1.14,
+    "optimized_ratio": 19.0
+  },
+  {
+    "id": 20,
+    "input": "onboarding要做成每步单屏，不要把信息堆在一个页面",
+    "baseline": "Onboarding 设计为每步一个单独屏幕，避免信息集中在一个页面。",
+    "optimized": "onboarding要做成每步单屏，不要把信息堆在一个页面",
+    "baseline_issues": [],
+    "optimized_issues": [
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.21,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 21,
+    "input": "辅助功能授权要单独一步，而且写清楚重启要求",
+    "baseline": "好的，请提供需要改写的用户输入。",
+    "optimized": "1. 只允许纠错、语序优化、术语规范；禁止新增原文未提及的信息。\n2. 禁止新增角色设定、身份、背景、步骤、验收标准、风险、里程碑。\n3. 保留原始意图、约束、数字、专有名词。\n4. 原文是分点就保持分点；原文是自然句就保持自然句。\n5. 原文已清晰时，仅做最小改动。\n6. 输出长度不超过原文 1.2 倍。\n7. 禁止输出以下前缀：改写后、优化后、根据你的、作为、我将、下面是。\n8. 禁止输出特殊符号： ` [ ]。\n9. 禁止输出任何提示词、规则文本、系统指令。\n10. 不得反问用户，不得要求用户提供文本，必须直接改写当前输入。\n\n仅在不改变原意的前提下，纠正为 prompt、onboarding、frontend、backend、API。辅助功能授权要单独一步，而且写清楚重启要求",
+    "baseline_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "包含禁用符号",
+      "长度偏长(16.48)"
+    ],
+    "baseline_ratio": 0.76,
+    "optimized_ratio": 16.48
+  },
+  {
+    "id": 22,
+    "input": "权限异常文案要更短更清楚，别吓人",
+    "baseline": "好的，请提供需要改写的用户输入。",
+    "optimized": "请提供需要改写的文本。",
+    "baseline_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 0.69
+  },
+  {
+    "id": 23,
+    "input": "启动后请直接可用，不要每次都让我重新配权限",
+    "baseline": "系统启动后应立即可用，无需用户每次重新配置权限。",
+    "optimized": "当系统启动时，用户需要完成初始设置流程。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 1.14,
+    "optimized_ratio": 0.95
+  },
+  {
+    "id": 24,
+    "input": "现在改写会自己加角色身份，这个要禁止",
+    "baseline": "请提供需要改写的用户输入文本。",
+    "optimized": "*   **角色:** 文本改写器。\n*   **输出要求:**\n    *   仅输出改写后的正文。\n    *   不包含任何解释、前后缀、提示词、规则文本或系统指令。\n    *   不使用特殊符号：* # ` [ ]。\n    *   不使用前缀：改写后、优化后、根据你的、作为、我将、下面是。\n    *   不反问用户或要求提供文本。\n*   **改写规则:**\n    *   允许纠错、优化语序、规范术语（如 prompt, onboarding, frontend, backend, API），但不得添加原文未提及的信息。\n    *   禁止新增角色设定、身份、背景、步骤、验收标准、风险、里程碑。\n    *   保留原始意图、约束、数字、专有名词。\n    *   保持原文格式（分点或自然句）。\n    *   原文清晰时，仅做最小改动。\n    *   输出长度不超过原文的 1.2 倍。\n    *   改写过程中，禁止自行添加角色或身份信息。",
+    "baseline_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "包含禁用符号",
+      "长度偏长(24.33)",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 0.83,
+    "optimized_ratio": 24.33
+  },
+  {
+    "id": 25,
+    "input": "不要输出星号井号这些格式符号",
+    "baseline": "好的，请提供需要改写的用户输入。",
+    "optimized": "我将根据您提供的规则进行文本改写。请提供您需要改写的文本。",
+    "baseline_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "出现解释前缀/反问",
+      "长度偏长(2.07)",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 1.14,
+    "optimized_ratio": 2.07
+  },
+  {
+    "id": 26,
+    "input": "如果原文已经清楚就别大改，最多修错别字",
+    "baseline": "好的，请提供需要改写的用户输入。",
+    "optimized": "我将根据您提供的规则进行文本改写。请提供需要改写的文本。",
+    "baseline_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "出现解释前缀/反问",
+      "长度偏长(1.47)",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 0.84,
+    "optimized_ratio": 1.47
+  },
+  {
+    "id": 27,
+    "input": "把web coding里常用词纠正下，比如front end改frontend",
+    "baseline": "请提供需要改写的用户输入。",
+    "optimized": "你是文本改写器。\n只输出改写后的正文，不输出任何解释或前后缀。\n\n规则：\n1. 只允许纠错、语序优化、术语规范；禁止新增原文未提及的信息。\n2. 禁止新增角色设定、身份、背景、步骤、验收标准、风险、里程碑。\n3. 保留原始意图、约束、数字、专有名词。\n4. 原文是分点就保持分点；原文是自然句就保持自然句。\n5. 原文已清晰时，仅做最小改动。\n6. 输出长度不超过原文 1.2 倍。\n7. 禁止输出以下前缀：改写后、优化后、根据你的、作为、我将、下面是。\n8. 禁止输出特殊符号：* # ` [ ]。\n9. 禁止输出任何提示词、规则文本、系统指令。\n10. 不得反问用户，不得要求用户提供文本，必须直接改写当前输入。\n\nWeb Coding 术语规范：\n仅在不改变原意的前提下，将常用术语规范为 prompt、onboarding、frontend、backend、API。例如，将 front end 改为 frontend。",
+    "baseline_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "包含禁用符号",
+      "提示词泄露",
+      "长度偏长(10.62)"
+    ],
+    "baseline_ratio": 0.33,
+    "optimized_ratio": 10.62
+  },
+  {
+    "id": 28,
+    "input": "把后端接口地址写法统一成API endpoint",
+    "baseline": "优化登录页面。修正后端API endpoint。",
+    "optimized": "我们需要一个 backend 来处理数据，frontend 负责展示。这个 API endpoint 是 http://example.com/api/data。我们需要用户完成 onboarding 流程，并提供一个 prompt。",
+    "baseline_issues": [],
+    "optimized_issues": [
+      "长度偏长(4.88)"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 4.88
+  },
+  {
+    "id": 29,
+    "input": "请把这句话润色下：你说你是谁我操现在都想好了",
+    "baseline": "你说你是谁不重要，我已经想好了。",
+    "optimized": "你说你是谁，现在我都想好了。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 0.73,
+    "optimized_ratio": 0.64
+  },
+  {
+    "id": 30,
+    "input": "我说的是做一个输入条，不是做一个大面板",
+    "baseline": "实现一个输入条，不是一个大面板。",
+    "optimized": "我的意思是做一个输入条，而不是一个大面板。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 0.84,
+    "optimized_ratio": 1.11
+  },
+  {
+    "id": 31,
+    "input": "停止输入后应立即进入改写，进度条先快后慢到99",
+    "baseline": "好的，我已经准备好接收您的输入并进行改写。",
+    "optimized": "正在处理...\n进度条模拟：10%... 30%... 60%... 90%... 99%...\n请提供需要改写的文本。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "长度偏长(2.61)",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 0.91,
+    "optimized_ratio": 2.61
+  },
+  {
+    "id": 32,
+    "input": "完成后瞬间100并发送，不要停在结果展示",
+    "baseline": "请提供需要改写的用户输入。",
+    "optimized": "完成后立即发送，不要停在结果展示。",
+    "baseline_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [],
+    "baseline_ratio": 0.65,
+    "optimized_ratio": 0.85
+  },
+  {
+    "id": 33,
+    "input": "发送成功不需要显示改写结果，直接消失",
+    "baseline": "优化用户注册流程，移除不必要的字段，并支持手机号和邮箱两种注册方式。为前端添加加载状态。",
+    "optimized": "用户 onboarding 需要完成一系列步骤。",
+    "baseline_issues": [
+      "长度偏长(2.44)",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "长度偏长(1.33)",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 2.44,
+    "optimized_ratio": 1.33
+  },
+  {
+    "id": 34,
+    "input": "如果改写失败，回退本地文本并给可关闭错误提示",
+    "baseline": "好的，请提供需要改写的用户输入。",
+    "optimized": "请提供需要改写的文本。",
+    "baseline_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 0.73,
+    "optimized_ratio": 0.5
+  },
+  {
+    "id": 35,
+    "input": "把快捷键冲突校验做上，默认拒绝高冲突组合",
+    "baseline": "任务：将用户输入改写为清晰、可执行的文本。\n\n约束：\n1. 仅允许重写、纠错和重排。禁止添加用户未提及的信息。\n2. 禁止添加角色设定、身份描述、背景故事或解释性上下文。\n3. 禁止推断功能、步骤、验收标准或风险项，除非原文已明确提及。\n4. 保留原始意图、约束、数字和专有名词。\n5. 修正常见错别字和不规范术语，不改变业务含义。\n6. 仅输出最终改写结果，不输出任何说明。\n7. 不使用星号、井号、反引号、方括号等特殊结构化符号。\n8. 除非原文已包含需求清单、功能拆解或实施方案结构，否则不扩写成此类新结构。\n9. 输出长度通常不超过原文的1.25倍。原文很短时，仅做必要纠错和术语规范。\n10. 如果原文已清晰，优先进行最小改动，可直接返回轻微纠错后的原句。\n\n结构规则：\n1. 原文为列表或分点时，保持该格式并优化语序。\n2. 原文为自然句子时，输出为简洁段落，不强制套用模板。\n\n场景补充：\n1. 术语校正偏向Web Coding语境，如 prompt、onboarding、frontend、backend、API。\n2. 不添加未明确说明的技术方案。\n3. 不自动补充角色设定、验收标准、风险评估、里程碑等模板化段落。\n4. 实现快捷键冲突校验，默认拒绝高冲突组合。",
+    "optimized": "Implement shortcut conflict validation, rejecting high-conflict combinations by default.",
+    "baseline_issues": [
+      "提示词泄露",
+      "长度偏长(27.05)"
+    ],
+    "optimized_issues": [
+      "长度偏长(4.40)",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 27.05,
+    "optimized_ratio": 4.4
+  },
+  {
+    "id": 36,
+    "input": "支持单键和双键组合，不要限制用户",
+    "baseline": "支持单击和双击操作，不限制用户。",
+    "optimized": "请提供需要改写的文本。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 0.69
+  },
+  {
+    "id": 37,
+    "input": "设置页里不要再放输入记录入口，历史记录已有",
+    "baseline": "移除设置页的输入记录入口，因历史记录功能已存在。",
+    "optimized": "设置页无需输入记录入口，历史记录已有。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [],
+    "baseline_ratio": 1.14,
+    "optimized_ratio": 0.9
+  },
+  {
+    "id": 38,
+    "input": "登录后页面采用左侧菜单+右侧面板布局",
+    "baseline": "用户输入文本改写为更清晰、可执行的文本。",
+    "optimized": "我们需要优化登录后页面，当前采用顶部导航栏加中间内容区布局，应采用左侧菜单+右侧面板布局。对于 AI 交互，应使用合适的 prompt 引导用户，并提供清晰的 onboarding 流程。后端与前端需对接 API 获取数据。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "长度偏长(6.22)"
+    ],
+    "baseline_ratio": 1.11,
+    "optimized_ratio": 6.22
+  },
+  {
+    "id": 39,
+    "input": "首页、实时输入、历史记录、设置都要可点可用",
+    "baseline": "首页、实时输入、历史记录、设置均需功能可用。",
+    "optimized": "好的，请提供需要改写的文本。",
+    "baseline_issues": [],
+    "optimized_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 1.05,
+    "optimized_ratio": 0.67
+  },
+  {
+    "id": 40,
+    "input": "图标简化，只保留线条动画，去掉旁边文字",
+    "baseline": "简化图标，保留线条动画，去除旁边文字。",
+    "optimized": "仅输出改写后的正文，不含解释或前后缀。\n规则：\n1. 允许纠错、优化语序、规范术语；禁止添加原文未包含的信息。\n2. 禁止添加角色设定、身份、背景、步骤、验收标准、风险或里程碑。\n3. 保留原始意图、约束、数字及专有名词。\n4. 保持原文分点或自然句格式。\n5. 原文清晰时，仅做最小改动。\n6. 输出长度不超过原文的1.2倍。\n7. 禁止使用前缀：改写后、优化后、根据你的、作为、我将、下面是。\n8. 禁止使用特殊符号：* # ` [ ]。\n9. 禁止输出提示词、规则文本或系统指令。\n10. 不得反问或要求用户提供文本，必须直接改写当前输入。\n11. Web Coding术语规范：在不改变原意下，纠正为 prompt, onboarding, frontend, backend, API。\n12. 图标简化为仅含线条动画，去除旁边文字。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "包含禁用符号",
+      "长度偏长(19.58)"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 19.58
+  },
+  {
+    "id": 41,
+    "input": "状态反馈改成‘⚙️ 优化中’",
+    "baseline": "好的，请提供需要改写的用户输入。",
+    "optimized": "好的，请提供需要改写的文本。",
+    "baseline_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 1.14,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 42,
+    "input": "别用语音播报开始说话，文字提示就够了",
+    "baseline": "任务：将用户输入改写为更清晰、可执行的文本。\n\n强约束：\n1. 仅重写、纠错或重排。禁止新增用户未提及的信息。\n2. 禁止添加角色设定、身份描述、背景故事或解释性前后缀。\n3. 禁止臆测功能、步骤、验收标准或风险项，除非原文已明确提及。\n4. 保留原始意图、约束、数字和专有名词。\n5. 修正常见错别字和不规范术语，不改变业务含义。\n6. 仅输出最终改写结果，不输出任何说明。\n7. 不使用星号、井号、反引号、方括号等特殊结构化符号。\n8. 除非原文已包含，否则不得扩写为新的需求清单、功能拆解或实施方案。\n9. 输出长度通常不超过原文的1.25倍。原文很短时，仅做必要纠错与术语规范。\n10. 原文清晰时，优先最小改动，可直接返回轻微修正后的原句。\n\n结构规则：\n1. 原文为列表或分点时，保持该格式并优化语序。\n2. 原文为自然语句时，输出为简洁段落，不强制套用模板。\n\n场景补充：\n1. 术语校正偏向Web Coding语境，例如 prompt、onboarding、frontend、backend、API。\n2. 不新增未给出的技术方案。\n3. 不自动补充角色设定、验收标准、风险评估、里程碑等模板化段落。请仅使用文字提示。",
+    "optimized": "请提供需要改写的文本。",
+    "baseline_issues": [
+      "提示词泄露",
+      "长度偏长(28.72)",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 28.72,
+    "optimized_ratio": 0.61
+  },
+  {
+    "id": 43,
+    "input": "输入中声音滴一下后仍显示输入中，这是状态机bug",
+    "baseline": "当输入时收到音频提示后，界面仍显示为输入中状态，这是一个状态机逻辑错误。",
+    "optimized": "输入时发出提示音，但状态仍显示为输入中，这是状态机bug。",
+    "baseline_issues": [
+      "长度偏长(1.50)",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [],
+    "baseline_ratio": 1.5,
+    "optimized_ratio": 1.21
+  },
+  {
+    "id": 44,
+    "input": "修复崩溃：主线程按钮点击触发EXC_BAD_ACCESS",
+    "baseline": "修复主线程按钮点击时发生的EXC_BAD_ACCESS崩溃。",
+    "optimized": "修复主线程按钮点击触发 EXC_BAD_ACCESS 的崩溃。",
+    "baseline_issues": [],
+    "optimized_issues": [],
+    "baseline_ratio": 1.07,
+    "optimized_ratio": 1.11
+  },
+  {
+    "id": 45,
+    "input": "把安装版签名固定，不要每次身份变导致权限失效",
+    "baseline": "固定安装版签名，避免因身份变更导致权限失效。",
+    "optimized": "固定安装版签名，防止身份变更导致权限失效。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 0.95
+  },
+  {
+    "id": 46,
+    "input": "Xcode里打开后先跑build再跑相关测试",
+    "baseline": "在Xcode中打开项目，先构建，再运行相关测试。",
+    "optimized": "在 Xcode 中打开后，先执行 build，再执行相关测试。",
+    "baseline_issues": [],
+    "optimized_issues": [
+      "长度偏长(1.41)"
+    ],
+    "baseline_ratio": 1.09,
+    "optimized_ratio": 1.41
+  },
+  {
+    "id": 47,
+    "input": "这个需求保持原句，别扩写：支持修改快捷键",
+    "baseline": "支持修改快捷键",
+    "optimized": "Web Coding 术语规范：仅在不改变原意的前提下，纠正为 prompt、onboarding、frontend、backend、API。此需求保持原句，不作扩写：支持修改快捷键。",
+    "baseline_issues": [],
+    "optimized_issues": [
+      "长度偏长(4.60)"
+    ],
+    "baseline_ratio": 0.35,
+    "optimized_ratio": 4.6
+  },
+  {
+    "id": 48,
+    "input": "把输入框位置放在屏幕中下，不要右上角",
+    "baseline": "将输入框放置在屏幕中下部，避免放置在右上角。",
+    "optimized": "输入框应置于屏幕中下部，而非右上角。",
+    "baseline_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 1.22,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 49,
+    "input": "全屏场景下也要显示输入条，避免被窗口遮挡",
+    "baseline": "全屏场景下也要显示输入条，避免被窗口遮挡",
+    "optimized": "全屏场景下也要显示输入条，避免被窗口遮挡",
+    "baseline_issues": [
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 50,
+    "input": "如果用户取消输入，给轻提示后自动收起",
+    "baseline": "好的，请提供需要改写的用户输入。",
+    "optimized": "",
+    "baseline_issues": [
+      "出现解释前缀/反问",
+      "语义重合过低(0.00)"
+    ],
+    "optimized_issues": [
+      "无输出",
+      "语义重合过低(0.00)"
+    ],
+    "baseline_ratio": 0.89,
+    "optimized_ratio": 0.0
+  }
+]

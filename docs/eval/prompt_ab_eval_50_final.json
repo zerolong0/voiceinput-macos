@@ -1,0 +1,842 @@
+[
+  {
+    "id": 1,
+    "input": "把首页改一下，左边菜单右边内容，别整那么多弹窗。",
+    "baseline_raw": "调整首页布局为左菜单右内容，减少弹窗数量。",
+    "baseline_final": "把首页改一下，左边菜单右边内容，别整那么多弹窗。",
+    "optimized_raw": "",
+    "optimized_final": "把首页改一下，左边菜单右边内容，别整那么多弹窗。",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 2,
+    "input": "onbording第一步要先授权辅助功能 第二步选风格 第三步设热键",
+    "baseline_raw": "1. Onboarding 第一步 授权辅助功能\n2. Onboarding 第二步 选择风格\n3. Onboarding 第三步 设置热键",
+    "baseline_final": "onbording第一步要先授权辅助功能 第二步选风格 第三步设热键",
+    "optimized_raw": "Onboarding第一步是授权辅助功能，第二步是选择风格，第三步是设置热键。",
+    "optimized_final": "onbording第一步要先授权辅助功能 第二步选风格 第三步设热键",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 3,
+    "input": "请把rewrite速度调快一点但是别乱改我原话",
+    "baseline_raw": "加快改写速度，并保持原意。",
+    "baseline_final": "请把rewrite速度调快一点但是别乱改我原话",
+    "optimized_raw": "好的，请提供原文。",
+    "optimized_final": "请把rewrite速度调快一点但是别乱改我原话",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 4,
+    "input": "快捷键设置点了没反应，支持用户直接按键盘录入，不要下拉选择",
+    "baseline_raw": "快捷键设置无响应。支持键盘直接输入，替代下拉选择。",
+    "baseline_final": "快捷键设置点了没反应，支持用户直接按键盘录入，不要下拉选择",
+    "optimized_raw": "",
+    "optimized_final": "快捷键设置点了没反应，支持用户直接按键盘录入，不要下拉选择",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 5,
+    "input": "我按住说话松开后没有进入thinking，还是输入中",
+    "baseline_raw": "",
+    "baseline_final": "我按住说话松开后没有进入thinking，还是输入中",
+    "optimized_raw": "按住说话松开后没有进入thinking，还是输入中。",
+    "optimized_final": "按住说话松开后没有进入thinking，还是输入中。",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 6,
+    "input": "把这个 toast 做短一点，错误要能手动关闭，还要自动消失",
+    "baseline_raw": "缩短此 toast 提示，支持手动关闭并自动消失。",
+    "baseline_final": "把这个 toast 做短一点，错误要能手动关闭，还要自动消失",
+    "optimized_raw": "",
+    "optimized_final": "把这个 toast 做短一点，错误要能手动关闭，还要自动消失",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 7,
+    "input": "输入框太长了，最多十个中文宽度，超出就滚动",
+    "baseline_raw": "输入框宽度限制为十个中文字符，超出部分应允许滚动。",
+    "baseline_final": "输入框太长了，最多十个中文宽度，超出就滚动",
+    "optimized_raw": "",
+    "optimized_final": "输入框太长了，最多十个中文宽度，超出就滚动",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 8,
+    "input": "不要把小红书拉起来，热键只触发语音输入",
+    "baseline_raw": "热键仅触发语音输入，不启动小红书。",
+    "baseline_final": "不要把小红书拉起来，热键只触发语音输入",
+    "optimized_raw": "",
+    "optimized_final": "不要把小红书拉起来，热键只触发语音输入",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 9,
+    "input": "授权状态老是脏数据，重编译后要清理再重新申请",
+    "baseline_raw": "授权状态数据脏，重新编译后，需要先清理数据，再重新申请授权。",
+    "baseline_final": "授权状态老是脏数据，重编译后要清理再重新申请",
+    "optimized_raw": "授权状态数据异常，重编译后需先清理再重新申请。",
+    "optimized_final": "授权状态老是脏数据，重编译后要清理再重新申请",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 10,
+    "input": "请你把模型切到 gemini-2.5-flash-lite",
+    "baseline_raw": "请提供需要改写的用户输入。",
+    "baseline_final": "请你把模型切到 gemini-2.5-flash-lite",
+    "optimized_raw": "请将模型切换至 gemini-2.5-flash-lite。",
+    "optimized_final": "请将模型切换至 gemini-2.5-flash-lite。",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.03
+  },
+  {
+    "id": 11,
+    "input": "历史记录最多保留100条，要能看原文和改写并复制",
+    "baseline_raw": "好的，请提供需要改写的用户输入。",
+    "baseline_final": "历史记录最多保留100条，要能看原文和改写并复制",
+    "optimized_raw": "好的，请提供文本。",
+    "optimized_final": "历史记录最多保留100条，要能看原文和改写并复制",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 12,
+    "input": "没有焦点时别丢消息，提示用户复制后手动粘贴",
+    "baseline_raw": "",
+    "baseline_final": "没有焦点时别丢消息，提示用户复制后手动粘贴",
+    "optimized_raw": "",
+    "optimized_final": "没有焦点时别丢消息，提示用户复制后手动粘贴",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 13,
+    "input": "thinking阶段只要AI图标，不要显示思考中三个字",
+    "baseline_raw": "请提供需要改写的用户输入。",
+    "baseline_final": "thinking阶段只要AI图标，不要显示思考中三个字",
+    "optimized_raw": "🤖",
+    "optimized_final": "thinking阶段只要AI图标，不要显示思考中三个字",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 14,
+    "input": "错误提示现在太宽了，限制最大宽度，图标文字对齐",
+    "baseline_raw": "",
+    "baseline_final": "错误提示现在太宽了，限制最大宽度，图标文字对齐",
+    "optimized_raw": "限制错误提示的最大宽度，并使图标和文字对齐。",
+    "optimized_final": "错误提示现在太宽了，限制最大宽度，图标文字对齐",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 15,
+    "input": "准备中这个状态条宽度要跟文字自适应，不要占满整行",
+    "baseline_raw": "状态条准备中的宽度随文字内容自适应，不占满整行。",
+    "baseline_final": "准备中这个状态条宽度要跟文字自适应，不要占满整行",
+    "optimized_raw": "准备中这个状态条的宽度应与文字内容自适应，不占满整行。",
+    "optimized_final": "准备中这个状态条宽度要跟文字自适应，不要占满整行",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 16,
+    "input": "把输入中的图标改成声波动画，不要转圈loading",
+    "baseline_raw": "将输入中的图标改为声波动画，移除转圈加载指示器。",
+    "baseline_final": "把输入中的图标改成声波动画，不要转圈loading",
+    "optimized_raw": "把输入中的图标改成声波动画，不要转圈loading",
+    "optimized_final": "把输入中的图标改成声波动画，不要转圈loading",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 17,
+    "input": "我希望初始状态输入框里显示‘请开始说话’文字提示",
+    "baseline_raw": "",
+    "baseline_final": "我希望初始状态输入框里显示‘请开始说话’文字提示",
+    "optimized_raw": "我希望初始状态输入框里显示‘请开始说话’prompt。",
+    "optimized_final": "我希望初始状态输入框里显示‘请开始说话’prompt。",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.12
+  },
+  {
+    "id": 18,
+    "input": "有文本后就替换为实时文本，单行显示，不换行",
+    "baseline_raw": "好的，请提供需要改写的用户输入。",
+    "baseline_final": "有文本后就替换为实时文本，单行显示，不换行",
+    "optimized_raw": "好的。",
+    "optimized_final": "有文本后就替换为实时文本，单行显示，不换行",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 19,
+    "input": "onboarding和主界面窗口尺寸要统一",
+    "baseline_raw": "请提供需要改写的用户输入。",
+    "baseline_final": "onboarding和主界面窗口尺寸要统一",
+    "optimized_raw": "onboarding和主界面窗口尺寸要统一",
+    "optimized_final": "onboarding和主界面窗口尺寸要统一",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 20,
+    "input": "onboarding要做成每步单屏，不要把信息堆在一个页面",
+    "baseline_raw": "Onboarding 流程应设计为每步一个屏幕，避免信息堆叠在单一页面。",
+    "baseline_final": "Onboarding 流程应设计为每步一个屏幕，避免信息堆叠在单一页面。",
+    "optimized_raw": "Onboarding 应每步单屏，避免信息堆积在同一页面。",
+    "optimized_final": "Onboarding 应每步单屏，避免信息堆积在同一页面。",
+    "baseline_issues": [],
+    "optimized_issues": [],
+    "baseline_ratio": 1.24,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 21,
+    "input": "辅助功能授权要单独一步，而且写清楚重启要求",
+    "baseline_raw": "",
+    "baseline_final": "辅助功能授权要单独一步，而且写清楚重启要求",
+    "optimized_raw": "请提供需要改写的文本。",
+    "optimized_final": "辅助功能授权要单独一步，而且写清楚重启要求",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 22,
+    "input": "权限异常文案要更短更清楚，别吓人",
+    "baseline_raw": "好的，请提供需要改写的用户输入。",
+    "baseline_final": "权限异常文案要更短更清楚，别吓人",
+    "optimized_raw": "好的。",
+    "optimized_final": "权限异常文案要更短更清楚，别吓人",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 23,
+    "input": "启动后请直接可用，不要每次都让我重新配权限",
+    "baseline_raw": "启动后请直接可用，无需每次重新配置权限。",
+    "baseline_final": "启动后请直接可用，无需每次重新配置权限。",
+    "optimized_raw": "好的。",
+    "optimized_final": "启动后请直接可用，不要每次都让我重新配权限",
+    "baseline_issues": [],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 0.95,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 24,
+    "input": "现在改写会自己加角色身份，这个要禁止",
+    "baseline_raw": "",
+    "baseline_final": "现在改写会自己加角色身份，这个要禁止",
+    "optimized_raw": "好的。",
+    "optimized_final": "现在改写会自己加角色身份，这个要禁止",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 25,
+    "input": "不要输出星号井号这些格式符号",
+    "baseline_raw": "提供用户通过输入用户名和密码进行登录的功能。同时提供注册功能。",
+    "baseline_final": "不要输出星号井号这些格式符号",
+    "optimized_raw": "好的。",
+    "optimized_final": "好的。",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 0.21
+  },
+  {
+    "id": 26,
+    "input": "如果原文已经清楚就别大改，最多修错别字",
+    "baseline_raw": "好的，请提供需要改写的用户输入。",
+    "baseline_final": "如果原文已经清楚就别大改，最多修错别字",
+    "optimized_raw": "",
+    "optimized_final": "如果原文已经清楚就别大改，最多修错别字",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 27,
+    "input": "把web coding里常用词纠正下，比如front end改frontend",
+    "baseline_raw": "用户列表页面需要支持分页，每页显示20条数据，并支持搜索。",
+    "baseline_final": "把web coding里常用词纠正下，比如front end改frontend",
+    "optimized_raw": "请提供需要改写的文本。",
+    "optimized_final": "把web coding里常用词纠正下，比如front end改frontend",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 28,
+    "input": "把后端接口地址写法统一成API endpoint",
+    "baseline_raw": "好的，请提供需要改写的用户输入。",
+    "baseline_final": "把后端接口地址写法统一成API endpoint",
+    "optimized_raw": "请提供需要改写的文本。",
+    "optimized_final": "把后端接口地址写法统一成API endpoint",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 29,
+    "input": "请把这句话润色下：你说你是谁我操现在都想好了",
+    "baseline_raw": "你说你是谁，现在我都想好了。",
+    "baseline_final": "请把这句话润色下：你说你是谁我操现在都想好了",
+    "optimized_raw": "你说你是谁，现在我都想好了。",
+    "optimized_final": "请把这句话润色下：你说你是谁我操现在都想好了",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 30,
+    "input": "我说的是做一个输入条，不是做一个大面板",
+    "baseline_raw": "我说的是做一个输入框，不是做一个大面板。",
+    "baseline_final": "我说的是做一个输入框，不是做一个大面板。",
+    "optimized_raw": "我说的是做一个输入条，不是做一个大面板",
+    "optimized_final": "我说的是做一个输入条，不是做一个大面板",
+    "baseline_issues": [],
+    "optimized_issues": [
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.05,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 31,
+    "input": "停止输入后应立即进入改写，进度条先快后慢到99",
+    "baseline_raw": "好的，请提供需要改写的用户输入。",
+    "baseline_final": "停止输入后应立即进入改写，进度条先快后慢到99",
+    "optimized_raw": "好的。",
+    "optimized_final": "停止输入后应立即进入改写，进度条先快后慢到99",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 32,
+    "input": "完成后瞬间100并发送，不要停在结果展示",
+    "baseline_raw": "",
+    "baseline_final": "完成后瞬间100并发送，不要停在结果展示",
+    "optimized_raw": "请写一个 prompt，用于生成关于如何进行新员工 onboarding 的指南。",
+    "optimized_final": "完成后瞬间100并发送，不要停在结果展示",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 33,
+    "input": "发送成功不需要显示改写结果，直接消失",
+    "baseline_raw": "好的，请提供需要改写的用户输入。",
+    "baseline_final": "发送成功不需要显示改写结果，直接消失",
+    "optimized_raw": "好的。",
+    "optimized_final": "发送成功不需要显示改写结果，直接消失",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 34,
+    "input": "如果改写失败，回退本地文本并给可关闭错误提示",
+    "baseline_raw": "好的，请提供需要改写的用户输入。",
+    "baseline_final": "如果改写失败，回退本地文本并给可关闭错误提示",
+    "optimized_raw": "好的。",
+    "optimized_final": "如果改写失败，回退本地文本并给可关闭错误提示",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 35,
+    "input": "把快捷键冲突校验做上，默认拒绝高冲突组合",
+    "baseline_raw": "实现快捷键冲突校验，默认拒绝高冲突组合。",
+    "baseline_final": "实现快捷键冲突校验，默认拒绝高冲突组合。",
+    "optimized_raw": "",
+    "optimized_final": "把快捷键冲突校验做上，默认拒绝高冲突组合",
+    "baseline_issues": [],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 36,
+    "input": "支持单键和双键组合，不要限制用户",
+    "baseline_raw": "支持单键和双键的组合操作。不限制用户。",
+    "baseline_final": "支持单键和双键组合，不要限制用户",
+    "optimized_raw": "好的。",
+    "optimized_final": "支持单键和双键组合，不要限制用户",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 37,
+    "input": "设置页里不要再放输入记录入口，历史记录已有",
+    "baseline_raw": "",
+    "baseline_final": "设置页里不要再放输入记录入口，历史记录已有",
+    "optimized_raw": "设置页里不要再放输入记录入口，历史记录已有",
+    "optimized_final": "设置页里不要再放输入记录入口，历史记录已有",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 38,
+    "input": "登录后页面采用左侧菜单+右侧面板布局",
+    "baseline_raw": "登录后页面采用左侧菜单和右侧面板布局。",
+    "baseline_final": "登录后页面采用左侧菜单和右侧面板布局。",
+    "optimized_raw": "登录后页面采用左侧菜单和右侧面板布局。",
+    "optimized_final": "登录后页面采用左侧菜单和右侧面板布局。",
+    "baseline_issues": [],
+    "optimized_issues": [],
+    "baseline_ratio": 1.06,
+    "optimized_ratio": 1.06
+  },
+  {
+    "id": 39,
+    "input": "首页、实时输入、历史记录、设置都要可点可用",
+    "baseline_raw": "",
+    "baseline_final": "首页、实时输入、历史记录、设置都要可点可用",
+    "optimized_raw": "",
+    "optimized_final": "首页、实时输入、历史记录、设置都要可点可用",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 40,
+    "input": "图标简化，只保留线条动画，去掉旁边文字",
+    "baseline_raw": "好的，请提供需要改写的用户输入。",
+    "baseline_final": "图标简化，只保留线条动画，去掉旁边文字",
+    "optimized_raw": "好的。",
+    "optimized_final": "图标简化，只保留线条动画，去掉旁边文字",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 41,
+    "input": "状态反馈改成‘⚙️ 优化中’",
+    "baseline_raw": "⚙️ 优化中",
+    "baseline_final": "⚙️ 优化中",
+    "optimized_raw": "",
+    "optimized_final": "状态反馈改成‘⚙️ 优化中’",
+    "baseline_issues": [],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 0.43,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 42,
+    "input": "别用语音播报开始说话，文字提示就够了",
+    "baseline_raw": "好的，请提供需要改写的用户输入。",
+    "baseline_final": "别用语音播报开始说话，文字提示就够了",
+    "optimized_raw": "好的。",
+    "optimized_final": "别用语音播报开始说话，文字提示就够了",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 43,
+    "input": "输入中声音滴一下后仍显示输入中，这是状态机bug",
+    "baseline_raw": "",
+    "baseline_final": "输入中声音滴一下后仍显示输入中，这是状态机bug",
+    "optimized_raw": "输入中声音提示后仍显示输入中，这是状态机错误。",
+    "optimized_final": "输入中声音提示后仍显示输入中，这是状态机错误。",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 0.96
+  },
+  {
+    "id": 44,
+    "input": "修复崩溃：主线程按钮点击触发EXC_BAD_ACCESS",
+    "baseline_raw": "修复主线程按钮点击触发EXC_BAD_ACCESS的崩溃。",
+    "baseline_final": "修复主线程按钮点击触发EXC_BAD_ACCESS的崩溃。",
+    "optimized_raw": "修复崩溃：主线程按钮点击触发EXC_BAD_ACCESS",
+    "optimized_final": "修复崩溃：主线程按钮点击触发EXC_BAD_ACCESS",
+    "baseline_issues": [],
+    "optimized_issues": [
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.04,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 45,
+    "input": "把安装版签名固定，不要每次身份变导致权限失效",
+    "baseline_raw": "固定安装版签名，避免身份变更导致权限失效。",
+    "baseline_final": "把安装版签名固定，不要每次身份变导致权限失效",
+    "optimized_raw": "将安装版签名固定，避免每次身份变更导致权限失效。",
+    "optimized_final": "把安装版签名固定，不要每次身份变导致权限失效",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 46,
+    "input": "Xcode里打开后先跑build再跑相关测试",
+    "baseline_raw": "在 Xcode 中，先执行构建，再运行相关测试。",
+    "baseline_final": "在 Xcode 中，先执行构建，再运行相关测试。",
+    "optimized_raw": "打开Xcode后，先运行构建，再运行相关测试。",
+    "optimized_final": "打开Xcode后，先运行构建，再运行相关测试。",
+    "baseline_issues": [],
+    "optimized_issues": [],
+    "baseline_ratio": 1.09,
+    "optimized_ratio": 1.05
+  },
+  {
+    "id": 47,
+    "input": "这个需求保持原句，别扩写：支持修改快捷键",
+    "baseline_raw": "支持修改快捷键",
+    "baseline_final": "支持修改快捷键",
+    "optimized_raw": "支持修改快捷键",
+    "optimized_final": "支持修改快捷键",
+    "baseline_issues": [],
+    "optimized_issues": [],
+    "baseline_ratio": 0.35,
+    "optimized_ratio": 0.35
+  },
+  {
+    "id": 48,
+    "input": "把输入框位置放在屏幕中下，不要右上角",
+    "baseline_raw": "",
+    "baseline_final": "把输入框位置放在屏幕中下，不要右上角",
+    "optimized_raw": "请编写一个 prompt，用于生成用户故事。",
+    "optimized_final": "把输入框位置放在屏幕中下，不要右上角",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 49,
+    "input": "全屏场景下也要显示输入条，避免被窗口遮挡",
+    "baseline_raw": "全屏场景下也要显示输入条，避免被窗口遮挡",
+    "baseline_final": "全屏场景下也要显示输入条，避免被窗口遮挡",
+    "optimized_raw": "好的。",
+    "optimized_final": "全屏场景下也要显示输入条，避免被窗口遮挡",
+    "baseline_issues": [
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  },
+  {
+    "id": 50,
+    "input": "如果用户取消输入，给轻提示后自动收起",
+    "baseline_raw": "好的，请提供需要改写的用户输入。",
+    "baseline_final": "如果用户取消输入，给轻提示后自动收起",
+    "optimized_raw": "",
+    "optimized_final": "如果用户取消输入，给轻提示后自动收起",
+    "baseline_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "optimized_issues": [
+      "触发防跑偏回退",
+      "最小改写/原样返回"
+    ],
+    "baseline_ratio": 1.0,
+    "optimized_ratio": 1.0
+  }
+]
