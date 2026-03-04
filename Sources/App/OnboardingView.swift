@@ -202,7 +202,7 @@ struct OnboardingView: View {
 
     private var hotkeyPage: some View {
         OnboardingCard {
-            Text("快捷键支持单键和双键组合。点击快捷键框后直接按键录入，可在设置页继续修改。")
+            Text("快捷键支持单键和双键组合。推荐 F6/F7/F8（如键盘需要可配合 Fn 使用），或组合键 Option + 0。双击快捷键可进入连续模式，再按一次结束。")
                 .foregroundStyle(.secondary)
 
             Button {
@@ -242,20 +242,37 @@ struct OnboardingView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Button("使用推荐热键（Option + 0）") {
-                SharedSettings.defaults.set(true, forKey: SharedSettings.Keys.hotkeyEnabled)
-                SharedSettings.defaults.set(2048, forKey: SharedSettings.Keys.hotkeyModifiers)
-                SharedSettings.defaults.set(29, forKey: SharedSettings.Keys.hotkeyKeyCode)
-                hotkeyText = "Option + 0"
-                hotkeyCaptureHint = "已恢复默认热键"
-                DistributedNotificationCenter.default().postNotificationName(
-                    Notification.Name(SharedNotifications.hotkeyChanged),
-                    object: nil,
-                    userInfo: nil,
-                    deliverImmediately: true
-                )
+            HStack(spacing: 10) {
+                Button("推荐单键（F6 / Fn+F6）") {
+                    SharedSettings.defaults.set(true, forKey: SharedSettings.Keys.hotkeyEnabled)
+                    SharedSettings.defaults.set(0, forKey: SharedSettings.Keys.hotkeyModifiers)
+                    SharedSettings.defaults.set(97, forKey: SharedSettings.Keys.hotkeyKeyCode)
+                    hotkeyText = "F6"
+                    hotkeyCaptureHint = "已设置推荐单键：F6"
+                    DistributedNotificationCenter.default().postNotificationName(
+                        Notification.Name(SharedNotifications.hotkeyChanged),
+                        object: nil,
+                        userInfo: nil,
+                        deliverImmediately: true
+                    )
+                }
+                .buttonStyle(.bordered)
+
+                Button("推荐组合（Option + 0）") {
+                    SharedSettings.defaults.set(true, forKey: SharedSettings.Keys.hotkeyEnabled)
+                    SharedSettings.defaults.set(2048, forKey: SharedSettings.Keys.hotkeyModifiers)
+                    SharedSettings.defaults.set(29, forKey: SharedSettings.Keys.hotkeyKeyCode)
+                    hotkeyText = "Option + 0"
+                    hotkeyCaptureHint = "已设置推荐组合：Option + 0"
+                    DistributedNotificationCenter.default().postNotificationName(
+                        Notification.Name(SharedNotifications.hotkeyChanged),
+                        object: nil,
+                        userInfo: nil,
+                        deliverImmediately: true
+                    )
+                }
+                .buttonStyle(.borderedProminent)
             }
-            .buttonStyle(.borderedProminent)
         }
     }
 
@@ -264,7 +281,7 @@ struct OnboardingView: View {
             Text("设置完成，已进入可用状态。")
                 .font(.title3.weight(.semibold))
 
-            FeatureLine(icon: "waveform", title: "输入逻辑", desc: "短按开始，再按一次结束；长按松手即结束并进入改写。")
+            FeatureLine(icon: "waveform", title: "输入逻辑", desc: "按住说话，松开结束。双击快捷键进入连续模式，再按一次结束。")
             FeatureLine(icon: "brain.head.profile", title: "Thinking", desc: "停止输入后自动改写，并尝试直接注入当前焦点输入框。")
             FeatureLine(icon: "doc.on.doc", title: "无焦点兜底", desc: "如果没有可输入焦点，会弹出轻量复制按钮，防止内容丢失。")
         }

@@ -23,11 +23,15 @@ final class AppHotkeyVoiceService: NSObject {
     private var activeHotkeyModifiers: UInt32 = UInt32(OptionSetFlag.optionSpaceModifiers.rawValue)
     private var activeHotkeyKeyCode: UInt32 = UInt32(OptionSetFlag.spaceKeyCode.rawValue)
     private var isVoiceInputActive = false
+    private var isContinuousMode = false
     private var currentText = ""
     private var isStoppingRecording = false
-    private var hotkeyPressBeganAt: TimeInterval = 0
+    private var isHotkeyCurrentlyDown = false
+    private var shouldStartContinuousOnActivation = false
+    private var lastHotkeyReleaseAt: TimeInterval = 0
     private var stopHandledOnPress = false
     private var pendingStopAfterActivation = false
+    private var didAttemptRecognitionRecovery = false
 
     private let whisperEngine = WhisperEngine()
     private let textProcessor = TextProcessor()
@@ -42,10 +46,7 @@ final class AppHotkeyVoiceService: NSObject {
     }
 
     private var pendingCopyContext: PendingCopyContext?
-    private var holdToStopThreshold: TimeInterval {
-        let value = SharedSettings.defaults.double(forKey: SharedSettings.Keys.hotkeyHoldToStopThreshold)
-        return min(1.2, max(0.15, value > 0 ? value : 0.35))
-    }
+    private let doubleTapWindow: TimeInterval = 0.35
 
     private override init() {
         super.init()
@@ -126,8 +127,12 @@ final class AppHotkeyVoiceService: NSObject {
         if primaryStatus == noErr {
             activeHotkeyKeyCode = UInt32(keyCode)
             activeHotkeyModifiers = UInt32(modifiers)
-            teardownKeyConsumeTap()
-            updateHotkeyRuntimeStatus("已注册: \(HotkeyConfig.modifierTitle(for: modifiers)) + \(HotkeyConfig.keyTitle(for: keyCode))")
+            if modifiers == 0 {
+                setupKeyConsumeTap()
+            } else {
+                teardownKeyConsumeTap()
+            }
+            updateHotkeyRuntimeStatus("已注册: \(formattedHotkey(modifiers: modifiers, keyCode: keyCode))")
             return
         }
 
@@ -286,27 +291,55 @@ final class AppHotkeyVoiceService: NSObject {
         defaults.set(status, forKey: SharedSettings.Keys.hotkeyRuntimeStatus)
     }
 
+    private func formattedHotkey(modifiers: Int, keyCode: Int) -> String {
+        if modifiers == 0 {
+            return HotkeyConfig.keyTitle(for: keyCode)
+        }
+        return "\(HotkeyConfig.modifierTitle(for: modifiers)) + \(HotkeyConfig.keyTitle(for: keyCode))"
+    }
+
     private func handleHotkeyPressed() {
-        hotkeyPressBeganAt = Date().timeIntervalSince1970
+        if isHotkeyCurrentlyDown {
+            return
+        }
+        isHotkeyCurrentlyDown = true
         stopHandledOnPress = false
+        let now = Date().timeIntervalSince1970
+
+        // In continuous mode, a single press ends recording immediately.
+        if isVoiceInputActive && isContinuousMode {
+            stopHandledOnPress = true
+            stopRecordingAndProcess()
+            return
+        }
 
         // Hold-to-talk model: key down starts recording, repeat keyDown while holding is ignored.
         if isVoiceInputActive {
             return
         }
 
+        let isDoubleTap = lastHotkeyReleaseAt > 0 && (now - lastHotkeyReleaseAt) <= doubleTapWindow
         pendingStopAfterActivation = false
+        shouldStartContinuousOnActivation = isDoubleTap
         statusPanel.showArming()
         RealtimeSessionStore.shared.setStage(.arming, text: "准备中")
         Task { @MainActor in
             let granted = await ensurePreflightPermissions()
             guard granted else { return }
-            startRecording()
+            startRecording(startInContinuousMode: shouldStartContinuousOnActivation)
         }
     }
 
     private func handleHotkeyReleased() {
+        guard isHotkeyCurrentlyDown else { return }
+        isHotkeyCurrentlyDown = false
+        lastHotkeyReleaseAt = Date().timeIntervalSince1970
         defer { stopHandledOnPress = false }
+
+        if isContinuousMode {
+            // Continuous mode keeps recording across key release.
+            return
+        }
 
         // Hold-to-talk model: key up always ends recording if active.
         if isVoiceInputActive && !stopHandledOnPress {
@@ -315,14 +348,16 @@ final class AppHotkeyVoiceService: NSObject {
         }
 
         // If key is released while still arming, stop immediately after activation.
-        if !isVoiceInputActive {
+        if !isVoiceInputActive && !shouldStartContinuousOnActivation {
             pendingStopAfterActivation = true
         }
     }
 
-    private func startRecording() {
+    private func startRecording(startInContinuousMode: Bool = false) {
         guard !isVoiceInputActive else { return }
         isVoiceInputActive = true
+        didAttemptRecognitionRecovery = false
+        isContinuousMode = startInContinuousMode
         currentText = ""
         pendingCopyContext = nil
         let shouldMuteExternalAudio = SharedSettings.defaults.object(forKey: SharedSettings.Keys.muteExternalAudioDuringInput) as? Bool ?? true
@@ -336,7 +371,15 @@ final class AppHotkeyVoiceService: NSObject {
 
         do {
             try whisperEngine.start()
-            if pendingStopAfterActivation {
+            if isContinuousMode {
+                statusPanel.show(status: "连续输入已开启", text: "双击进入连续模式后，可按一次快捷键结束", showCopy: false)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { [weak self] in
+                    guard let self else { return }
+                    guard self.isVoiceInputActive, self.isContinuousMode else { return }
+                    self.statusPanel.showListening(text: self.currentText)
+                }
+            }
+            if pendingStopAfterActivation && !isContinuousMode {
                 pendingStopAfterActivation = false
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
                     self?.stopRecordingAndProcess()
@@ -344,7 +387,9 @@ final class AppHotkeyVoiceService: NSObject {
             }
         } catch {
             isVoiceInputActive = false
+            isContinuousMode = false
             pendingStopAfterActivation = false
+            shouldStartContinuousOnActivation = false
             reportError(.startup, message: error.localizedDescription)
         }
     }
@@ -358,7 +403,10 @@ final class AppHotkeyVoiceService: NSObject {
         let capturedText = currentText
         currentText = ""
         isVoiceInputActive = false
+        didAttemptRecognitionRecovery = false
+        isContinuousMode = false
         pendingStopAfterActivation = false
+        shouldStartContinuousOnActivation = false
 
         guard !capturedText.isEmpty else {
             statusPanel.hide()
@@ -480,7 +528,12 @@ final class AppHotkeyVoiceService: NSObject {
     }
 
     private func insertTextIntoFocusedApp(_ text: String) -> Bool {
-        guard hasFocusedElement() else { return false }
+        guard let focused = focusedElement() else { return false }
+
+        // Prefer AX direct insertion for editable controls; fallback to pasteboard Cmd+V.
+        if insertTextViaAX(text, into: focused) {
+            return true
+        }
 
         let pasteboard = NSPasteboard.general
         let original = pasteboard.string(forType: .string)
@@ -508,12 +561,66 @@ final class AppHotkeyVoiceService: NSObject {
         return true
     }
 
-    private func hasFocusedElement() -> Bool {
-        guard AccessibilityTrust.isTrusted(prompt: false) else { return false }
+    private func focusedElement() -> AXUIElement? {
+        guard AccessibilityTrust.isTrusted(prompt: false) else { return nil }
         let systemWide = AXUIElementCreateSystemWide()
         var focused: CFTypeRef?
         let status = AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focused)
-        return status == .success && focused != nil
+        guard status == .success, let focused else { return nil }
+        guard CFGetTypeID(focused) == AXUIElementGetTypeID() else { return nil }
+        return (focused as! AXUIElement)
+    }
+
+    private func insertTextViaAX(_ text: String, into element: AXUIElement) -> Bool {
+        guard isAXEditable(element) else { return false }
+
+        var valueRef: CFTypeRef?
+        let valueStatus = AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueRef)
+        guard valueStatus == .success, let valueRef, let currentValue = valueRef as? String else {
+            return false
+        }
+
+        var rangeRef: CFTypeRef?
+        let rangeStatus = AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &rangeRef)
+        guard rangeStatus == .success, let rangeRef, CFGetTypeID(rangeRef) == AXValueGetTypeID() else {
+            return false
+        }
+        let axRange = (rangeRef as! AXValue)
+
+        var selected = CFRange()
+        guard AXValueGetType(axRange) == .cfRange, AXValueGetValue(axRange, .cfRange, &selected) else {
+            return false
+        }
+
+        let nsCurrent = currentValue as NSString
+        let safeLocation = max(0, min(selected.location, nsCurrent.length))
+        let safeLength = max(0, min(selected.length, nsCurrent.length - safeLocation))
+        let safeRange = NSRange(location: safeLocation, length: safeLength)
+        let merged = nsCurrent.replacingCharacters(in: safeRange, with: text)
+
+        let setStatus = AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, merged as CFTypeRef)
+        guard setStatus == .success else { return false }
+
+        var newCaret = CFRange(location: safeLocation + (text as NSString).length, length: 0)
+        guard let newAXRange = AXValueCreate(.cfRange, &newCaret) else { return true }
+        _ = AXUIElementSetAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, newAXRange)
+        return true
+    }
+
+    private func isAXEditable(_ element: AXUIElement) -> Bool {
+        let axEditableAttr = "AXEditable" as CFString
+        var editableRef: CFTypeRef?
+        let editableStatus = AXUIElementCopyAttributeValue(element, axEditableAttr, &editableRef)
+        if editableStatus == .success, let editable = editableRef as? Bool, editable {
+            return true
+        }
+
+        var roleRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success,
+              let role = roleRef as? String else {
+            return false
+        }
+        return role == kAXTextAreaRole as String || role == kAXTextFieldRole as String || role == "AXSearchField"
     }
 
     private func copyPendingTextToClipboard() {
@@ -682,6 +789,24 @@ extension AppHotkeyVoiceService: WhisperEngineDelegate {
             if self.isStoppingRecording || !self.isVoiceInputActive {
                 return
             }
+
+            if !self.didAttemptRecognitionRecovery {
+                self.didAttemptRecognitionRecovery = true
+                let preservedText = self.currentText
+                do {
+                    try self.whisperEngine.start()
+                    self.currentText = preservedText
+                    self.statusPanel.showListening(text: preservedText)
+                    RealtimeSessionStore.shared.setStage(.transcribing, text: "实时转写中...")
+                    RealtimeSessionStore.shared.updateOriginalLiveText(preservedText)
+                    return
+                } catch {
+                    self.isVoiceInputActive = false
+                    self.reportError(.recognition, message: "自动恢复失败：\(error.localizedDescription)")
+                    return
+                }
+            }
+
             self.isVoiceInputActive = false
             self.reportError(.recognition, message: error.localizedDescription)
         }

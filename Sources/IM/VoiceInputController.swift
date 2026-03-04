@@ -21,6 +21,8 @@ class VoiceInputController: IMKInputController {
 
     /// Whether voice input is currently active
     private var isVoiceInputActive = false
+    private var isHotkeyCurrentlyDown = false
+    private var didAttemptRecognitionRecovery = false
     private var hotkeyPressBeganAt: TimeInterval = 0
     private var stopHandledOnPress = false
     private var holdToStopThreshold: TimeInterval {
@@ -144,8 +146,15 @@ class VoiceInputController: IMKInputController {
             }
         } else {
             NSLog("VoiceInput: Hotkey registered modifiers=\(modifiers) keyCode=\(keyCode)")
-            updateHotkeyRuntimeStatus("已注册: \(HotkeyConfig.modifierTitle(for: Int(modifiers))) + \(HotkeyConfig.keyTitle(for: Int(keyCode)))")
+            updateHotkeyRuntimeStatus("已注册: \(formattedHotkey(modifiers: Int(modifiers), keyCode: Int(keyCode)))")
         }
+    }
+
+    private func formattedHotkey(modifiers: Int, keyCode: Int) -> String {
+        if modifiers == 0 {
+            return HotkeyConfig.keyTitle(for: keyCode)
+        }
+        return "\(HotkeyConfig.modifierTitle(for: modifiers)) + \(HotkeyConfig.keyTitle(for: keyCode))"
     }
 
     private func installHotkeyHandler() {
@@ -198,6 +207,10 @@ class VoiceInputController: IMKInputController {
 
     /// Handle hotkey press
     private func handleHotkeyPressed() {
+        if isHotkeyCurrentlyDown {
+            return
+        }
+        isHotkeyCurrentlyDown = true
         hotkeyPressBeganAt = Date().timeIntervalSince1970
         stopHandledOnPress = false
 
@@ -210,6 +223,8 @@ class VoiceInputController: IMKInputController {
 
     /// Handle hotkey release
     private func handleHotkeyReleased() {
+        guard isHotkeyCurrentlyDown else { return }
+        isHotkeyCurrentlyDown = false
         defer { stopHandledOnPress = false }
         // Hold-to-talk model: key up always ends recording if active.
         if isVoiceInputActive && !stopHandledOnPress {
@@ -220,6 +235,7 @@ class VoiceInputController: IMKInputController {
     /// Activate voice input mode
     private func activateVoiceInput() {
         NSLog("VoiceInput: Activated")
+        didAttemptRecognitionRecovery = false
         currentText = ""
         pendingCopyContext = nil
         statusPanel.showListening(text: "")
@@ -246,6 +262,7 @@ class VoiceInputController: IMKInputController {
 
         let capturedText = currentText
         currentText = ""
+        didAttemptRecognitionRecovery = false
         isVoiceInputActive = false
 
         guard !capturedText.isEmpty else { return }
@@ -509,6 +526,21 @@ extension VoiceInputController: WhisperEngineDelegate {
 
     func whisperEngine(_ engine: WhisperEngine, didFailWithError error: WhisperError) {
         NSLog("VoiceInput: Recognition error: \(error.localizedDescription)")
+        if !didAttemptRecognitionRecovery && isVoiceInputActive {
+            didAttemptRecognitionRecovery = true
+            let preservedText = currentText
+            do {
+                try whisperEngine.start()
+                currentText = preservedText
+                statusPanel.showListening(text: preservedText)
+                return
+            } catch {
+                isVoiceInputActive = false
+                candidateWindow?.hide()
+                statusPanel.showError("识别失败：自动恢复失败：\(error.localizedDescription)")
+                return
+            }
+        }
         isVoiceInputActive = false
         candidateWindow?.hide()
         statusPanel.showError("识别失败：\(error.localizedDescription)")
