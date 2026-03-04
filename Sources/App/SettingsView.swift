@@ -101,6 +101,10 @@ struct SettingsView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
+                        Text("推荐热键：F6 / F7 / F8（如键盘需要可配合 Fn）。按住说话松开结束；双击快捷键进入连续模式，再按一次结束。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
                         HStack {
                             Text("运行状态:")
                             Spacer()
@@ -109,19 +113,9 @@ struct SettingsView: View {
                                 .lineLimit(1)
                         }
 
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Text("长按松手触发阈值")
-                                Spacer()
-                                Text(String(format: "%.2f 秒", hotkeyHoldToStopThreshold))
-                                    .foregroundStyle(.secondary)
-                                    .monospacedDigit()
-                            }
-                            Slider(value: $hotkeyHoldToStopThreshold, in: 0.15...1.20, step: 0.05)
-                            Text("按住超过该时长，松手后自动停止并进入改写。")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                        Text("连续模式说明：双击快捷键开始持续收音，期间松开按键不会结束；再次按下同一快捷键即结束并进入改写。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
 
                     // 语音终端
@@ -418,7 +412,10 @@ struct SettingsView: View {
     }
 
     private var hotkeyDescription: String {
-        "\(HotkeyConfig.modifierTitle(for: hotkeyModifiers)) + \(HotkeyConfig.keyTitle(for: hotkeyKeyCode))"
+        if hotkeyModifiers == 0 {
+            return HotkeyConfig.keyTitle(for: hotkeyKeyCode)
+        }
+        return "\(HotkeyConfig.modifierTitle(for: hotkeyModifiers)) + \(HotkeyConfig.keyTitle(for: hotkeyKeyCode))"
     }
 
     private func syncFromSharedDefaults() {

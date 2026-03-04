@@ -28,6 +28,9 @@ enum HotkeyConfig {
         HotkeyKeyOption(id: "space", title: "Space", keyCode: 49),
         HotkeyKeyOption(id: "return", title: "Return", keyCode: 36),
         HotkeyKeyOption(id: "tab", title: "Tab", keyCode: 48),
+        HotkeyKeyOption(id: "f6", title: "F6", keyCode: 97),
+        HotkeyKeyOption(id: "f7", title: "F7", keyCode: 98),
+        HotkeyKeyOption(id: "f8", title: "F8", keyCode: 100),
         HotkeyKeyOption(id: "1", title: "1", keyCode: 18),
         HotkeyKeyOption(id: "2", title: "2", keyCode: 19),
         HotkeyKeyOption(id: "3", title: "3", keyCode: 20),
@@ -81,18 +84,6 @@ enum HotkeyConfig {
         let isCommand = (modifiers & cmdKey) != 0
         if isCommand {
             return (false, "不支持 Command 组合。请使用 Option / Control / Shift 组合")
-        }
-
-        // High-conflict combos are rejected by default.
-        let highConflictSingleKeys = Set([
-            49, // Space
-            48, // Tab
-            36, // Return
-            9, 11, 45, 46, 40, // V/B/N/M/K
-            18, 19, 20, 21, 23, 22, 26, 28, 25, 29 // 1...0
-        ])
-        if modifiers == 0 && highConflictSingleKeys.contains(keyCode) {
-            return (false, "该单键冲突高，请至少加一个修饰键")
         }
 
         return (true, nil)
