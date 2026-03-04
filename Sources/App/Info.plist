@@ -32,5 +32,9 @@
     <string>VoiceInput 需要使用麦克风进行语音输入。</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>VoiceInput 需要使用语音识别将您的语音转换为文字。</string>
+    <key>NSCalendarsUsageDescription</key>
+    <string>VoiceInput 语音终端需要访问日历以创建事件。</string>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>VoiceInput 语音终端需要使用 AppleScript 自动化来创建笔记和打开应用。</string>
 </dict>
 </plist>

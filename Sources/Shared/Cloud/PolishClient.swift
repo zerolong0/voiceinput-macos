@@ -157,8 +157,17 @@ final class PolishClient {
         case "vibe_coding", "technical":
             return """
             \(baseRules)
-            Web Coding 术语规范：
-            仅在不改变原意的前提下，纠正为 prompt、onboarding、frontend、backend、API。
+            Vibe Coding 术语规范：
+            你面向的是开发者对 AI 编程助手发出的指令场景。
+            保留代码相关术语原样（函数名、变量名、文件名、CLI 命令）。
+            中文口语技术词修正：
+              接口→API，前端→frontend，后端→backend，数据库→database，部署→deploy，
+              提示词→prompt，引导流程→onboarding，组件→component，钩子→hook，
+              容器→container，镜像→image，流水线→pipeline，分支→branch，
+              合并→merge，回滚→rollback，缓存→cache，路由→router。
+            保留数字、路径、版本号、包名不做修改。
+            如果原文是给 AI 的指令（如"帮我写一个..."），保持指令语气，不要改为陈述句。
+            如果原文包含代码片段或命令，原样保留不动。
             """
         case "formal", "email":
             return """

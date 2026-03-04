@@ -7,8 +7,31 @@ enum AccessibilityTrust {
 
     static func isTrusted(prompt: Bool) -> Bool {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: prompt] as CFDictionary
-        // Source of truth must be AX runtime API.
-        // TCC DB is used for diagnostics only and can be stale across rebuild/signing changes.
+        return AXIsProcessTrustedWithOptions(options)
+    }
+
+    /// Attempt to clear stale TCC entry and re-prompt.
+    /// Returns true if accessibility is granted after recovery.
+    static func resetAndReauthorize() -> Bool {
+        // Already trusted — no reset needed
+        if AXIsProcessTrusted() { return true }
+
+        // Try to clear stale TCC entry via tccutil
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.voiceinput.macos"
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
+        process.arguments = ["reset", "Accessibility", bundleID]
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            // tccutil failed — fall through to prompt
+        }
+
+        // Now re-prompt (should show fresh system dialog since stale entry was cleared)
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         return AXIsProcessTrustedWithOptions(options)
     }
 

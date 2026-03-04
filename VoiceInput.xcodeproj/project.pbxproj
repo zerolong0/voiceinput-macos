@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -14,23 +14,30 @@
 		2215682028C2479722DF04ED /* InputStatusPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 608BE5F559F1180391F44847 /* InputStatusPanel.swift */; };
 		257768AD4D97BC179932EFA9 /* PolishClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0E9F80287DF7E80B62045E /* PolishClient.swift */; };
 		261557D041ADDC2A64A8EA65 /* VoiceInputController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F80B63E93C4D2A185819744 /* VoiceInputController.swift */; };
+		279692E2ECD79B414B28E183 /* CLIAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB6C80C1FF04B73F38DED098 /* CLIAgent.swift */; };
 		2AE01A0DFA9FCC2B75895588 /* Contents.json in Resources */ = {isa = PBXBuildFile; fileRef = E364A1920D8DB7215201D9AF /* Contents.json */; };
 		30DD792487A453C715984F91 /* SharedSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78F609194CD98B47CD421234 /* SharedSettings.swift */; };
 		31B875618304590E5C5CC9C6 /* AudioFormat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DC8CD332A60C32D23232683 /* AudioFormat.swift */; };
 		37C026B8931453A6CDD62B63 /* icon_32x32.png in Resources */ = {isa = PBXBuildFile; fileRef = D5FB50A75D6D6A9269812D5A /* icon_32x32.png */; };
+		399812D4CCA22002CBB760A0 /* NotesAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 300736F5B0F65C334276E135 /* NotesAgent.swift */; };
 		3D43D3F5BF91359B28BABBF4 /* HotkeyConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85E18AB78FC76883179B7F8D /* HotkeyConfig.swift */; };
 		3E04ACA24654B125CCDD86FF /* VADetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8773015F95DC657A882B4FA /* VADetector.swift */; };
 		45FA903F8857BFE08BED68E7 /* PermissionDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BE55A6889A54A4FA27ABE4E /* PermissionDiagnostics.swift */; };
+		465D6652D1C42FBB475F4220 /* TerminalPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17061A38F79122B41455B1F2 /* TerminalPanel.swift */; };
 		483F9CC58F587F3BC6E459F7 /* VADetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8773015F95DC657A882B4FA /* VADetector.swift */; };
 		4AC2187237036E30A4FAE594 /* icon_128x128.png in Resources */ = {isa = PBXBuildFile; fileRef = 332C0147BC35FB091A05057D /* icon_128x128.png */; };
+		4CD51FDA7204C75402EADCA1 /* TerminalPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17061A38F79122B41455B1F2 /* TerminalPanel.swift */; };
 		502F48E747355F8FF19C8B7B /* RealtimeSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7755529D3182767EBA8DD6F9 /* RealtimeSessionStore.swift */; };
 		509CF63DA0819437F4C8190E /* MicrophonePermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C4A48A39F7C331E0DC6633 /* MicrophonePermission.swift */; };
+		546AB9DD465B14D3A2DB3A8B /* AppLauncherAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA478AB9015E90149B6ECE6E /* AppLauncherAgent.swift */; };
 		567825B7166858DBB63F822A /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CBD5D5BD7070C024C9C7596 /* AudioRecorder.swift */; };
 		58919CFC3380850752422173 /* InputStatusPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 608BE5F559F1180391F44847 /* InputStatusPanel.swift */; };
+		5AADE1B8B1AC2C26C750293B /* IntentRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 686FDBF4B208FA856BE83120 /* IntentRecognizer.swift */; };
 		5AF6D82341A88896A39285D7 /* InputHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91D403F3D2F883FA2DDF3415 /* InputHistoryStore.swift */; };
 		5DFC00206AE1294B00B17643 /* icon_32x32@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 99AA8DAACA1E6956C1016C48 /* icon_32x32@2x.png */; };
 		622CE74D20212AEA1AD7B125 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CBD5D5BD7070C024C9C7596 /* AudioRecorder.swift */; };
 		630F47909855EB35689E6AE3 /* icon_16x16.png in Resources */ = {isa = PBXBuildFile; fileRef = CA9FC17EF50D8D28B3DD6BB0 /* icon_16x16.png */; };
+		644B5BD191928F222DC07946 /* CLIAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB6C80C1FF04B73F38DED098 /* CLIAgent.swift */; };
 		6FC44E73FEDE646F6A7C672F /* AccessibilityTrust.swift in Sources */ = {isa = PBXBuildFile; fileRef = 826CAD1B4F4C76C22E121556 /* AccessibilityTrust.swift */; };
 		6FFD194D3AD6AF7AEA8885DA /* MicrophonePermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37C4A48A39F7C331E0DC6633 /* MicrophonePermission.swift */; };
 		70FD5FE7B4A83B080DF986A0 /* icon_16x16@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 88B665DF398CE0C2776F99C9 /* icon_16x16@2x.png */; };
@@ -39,7 +46,9 @@
 		80C2A4B98D37CF951D47B780 /* SceneDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F4FF67D55A028ADEB51A228 /* SceneDetector.swift */; };
 		81AAAFF44D1A8AD2EAFDFE7E /* icon_512x512@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 47CB2F0153D59DCDEE0D1881 /* icon_512x512@2x.png */; };
 		82E19C74D7911441DCBD9F67 /* icon_256x256@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = A2E3F4F7B72D71C69F26E15B /* icon_256x256@2x.png */; };
+		85754FA41979A3339AD3513F /* AppLauncherAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA478AB9015E90149B6ECE6E /* AppLauncherAgent.swift */; };
 		862BD43EACBC5D9B384B9640 /* StreamingWhisperRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FD63920BC935B97E8E97145 /* StreamingWhisperRecognizer.swift */; };
+		8D6068A62081C2E2192B69D8 /* CalendarAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B28E697AFE1FC243F538B1B1 /* CalendarAgent.swift */; };
 		8E91AC6E266AD4DBCBFFA8ED /* AppHotkeyVoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A5DEA2ED2DFEA94EE4E3EE /* AppHotkeyVoiceService.swift */; };
 		8ECE5D1A06CAC9951E6C2133 /* MainWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A993ECAE806E8A3F62C0B219 /* MainWorkspaceView.swift */; };
 		93EC38FBDC93C6A823B1E33C /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = EF0396A975D2D9A92D700312 /* README.md */; };
@@ -49,11 +58,15 @@
 		9DE7932079487957CD9C75CE /* InputHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91D403F3D2F883FA2DDF3415 /* InputHistoryStore.swift */; };
 		9FEE6BC571BCC0D2C947277F /* AppBehaviorController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CEB8B2848CF7C138C6F2D17 /* AppBehaviorController.swift */; };
 		A361AB6FB7CFD84C1F61BF92 /* AudioCaptureManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F251FB736F4F0670D453259 /* AudioCaptureManager.swift */; };
+		ACD7A566E1D7A48665B82847 /* CommandRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10AB8EE4BEEE0A1DD5A1D9F5 /* CommandRouter.swift */; };
 		B176C7D1E924504150F49F68 /* UserDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE679BCD8B85CC6ED50F8F83 /* UserDictionary.swift */; };
+		B1D5D0D61C0B2E1EABBBADF0 /* CalendarAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B28E697AFE1FC243F538B1B1 /* CalendarAgent.swift */; };
 		BDB63550BAEE780F57E3C00C /* WhisperEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C978F448B2598D04CA81053A /* WhisperEngine.swift */; };
 		BE8D626DF16A2409BD2B591B /* AudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9353598C53681EE770720996 /* AudioCapture.swift */; };
 		BEACE7AB0F81E7C8ED693371 /* UserDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE679BCD8B85CC6ED50F8F83 /* UserDictionary.swift */; };
+		C7A97B0389B91AD044849102 /* IntentRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 686FDBF4B208FA856BE83120 /* IntentRecognizer.swift */; };
 		C9B15A6E6539EFCB02907A55 /* RealtimeSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7755529D3182767EBA8DD6F9 /* RealtimeSessionStore.swift */; };
+		CBF7ABDDE7F9A5AE454A4FFA /* CommandRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10AB8EE4BEEE0A1DD5A1D9F5 /* CommandRouter.swift */; };
 		CC64119DB2BF22E08323A01E /* HotkeyConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85E18AB78FC76883179B7F8D /* HotkeyConfig.swift */; };
 		CFA407B35CF133B480EE47E4 /* SceneDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F4FF67D55A028ADEB51A228 /* SceneDetector.swift */; };
 		D3216B58BCABC35311473936 /* AppIcon.svg in Resources */ = {isa = PBXBuildFile; fileRef = 7D9B7AA9031D4858297CB7F0 /* AppIcon.svg */; };
@@ -66,17 +79,22 @@
 		E73831DB007E85BCBAE2E7A7 /* icon_128x128@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 1EBE3FFA6BE894CC2AF8F1E6 /* icon_128x128@2x.png */; };
 		EA7E8CE33DCE3752D97D36D0 /* TextProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 441D51A6F1D46FF2AD49590E /* TextProcessor.swift */; };
 		EB4AA78A88F83A0791AAA609 /* AudioCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9353598C53681EE770720996 /* AudioCapture.swift */; };
+		EBA0FDF73D3FCF6135C1B354 /* NotesAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 300736F5B0F65C334276E135 /* NotesAgent.swift */; };
 		EEC217E70E6BE15D10EC5C42 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33ADE79D6A80BFA06ACCF4CD /* main.swift */; };
 		F5A7FA4F67803680C58D1393 /* TextProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 441D51A6F1D46FF2AD49590E /* TextProcessor.swift */; };
 		F6DB09EB697B8366E843AB69 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = EF0396A975D2D9A92D700312 /* README.md */; };
 		F71A332DA80628691D95716D /* WhisperEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C978F448B2598D04CA81053A /* WhisperEngine.swift */; };
 		F88BF9C28EE46F1A96FA2B83 /* SharedSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78F609194CD98B47CD421234 /* SharedSettings.swift */; };
 		FC3FBBA21E03BA75024AD2A1 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6A027CC3FB1FABDEF651326 /* SettingsView.swift */; };
+		FE22E8F874BD857FC6BD98E9 /* VoiceTerminalService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 618789927E67EB00B7E30E2D /* VoiceTerminalService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		10AB8EE4BEEE0A1DD5A1D9F5 /* CommandRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandRouter.swift; sourceTree = "<group>"; };
+		17061A38F79122B41455B1F2 /* TerminalPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalPanel.swift; sourceTree = "<group>"; };
 		1A0CFDED71469A5C6C009F92 /* AudioBufferManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioBufferManager.swift; sourceTree = "<group>"; };
 		1EBE3FFA6BE894CC2AF8F1E6 /* icon_128x128@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon_128x128@2x.png"; sourceTree = "<group>"; };
+		300736F5B0F65C334276E135 /* NotesAgent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesAgent.swift; sourceTree = "<group>"; };
 		30A5DEA2ED2DFEA94EE4E3EE /* AppHotkeyVoiceService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppHotkeyVoiceService.swift; sourceTree = "<group>"; };
 		332C0147BC35FB091A05057D /* icon_128x128.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon_128x128.png; sourceTree = "<group>"; };
 		33ADE79D6A80BFA06ACCF4CD /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -93,12 +111,14 @@
 		5E24FFC0D1731F019914E36A /* icon_256x256.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon_256x256.png; sourceTree = "<group>"; };
 		608BE5F559F1180391F44847 /* InputStatusPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputStatusPanel.swift; sourceTree = "<group>"; };
 		6151E0ECAD6171CCC569F437 /* VoiceInputIM.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoiceInputIM.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		618789927E67EB00B7E30E2D /* VoiceTerminalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceTerminalService.swift; sourceTree = "<group>"; };
+		686FDBF4B208FA856BE83120 /* IntentRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentRecognizer.swift; sourceTree = "<group>"; };
 		6BE55A6889A54A4FA27ABE4E /* PermissionDiagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionDiagnostics.swift; sourceTree = "<group>"; };
 		73B0CEE8AE7BC8240CE99E47 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7755529D3182767EBA8DD6F9 /* RealtimeSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeSessionStore.swift; sourceTree = "<group>"; };
 		78F609194CD98B47CD421234 /* SharedSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedSettings.swift; sourceTree = "<group>"; };
 		7CBD5D5BD7070C024C9C7596 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
-		7D9B7AA9031D4858297CB7F0 /* AppIcon.svg */ = {isa = PBXFileReference; lastKnownFileType = text; path = AppIcon.svg; sourceTree = "<group>"; };
+		7D9B7AA9031D4858297CB7F0 /* AppIcon.svg */ = {isa = PBXFileReference; path = AppIcon.svg; sourceTree = "<group>"; };
 		826CAD1B4F4C76C22E121556 /* AccessibilityTrust.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityTrust.swift; sourceTree = "<group>"; };
 		85E18AB78FC76883179B7F8D /* HotkeyConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyConfig.swift; sourceTree = "<group>"; };
 		88B665DF398CE0C2776F99C9 /* icon_16x16@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon_16x16@2x.png"; sourceTree = "<group>"; };
@@ -111,7 +131,9 @@
 		A2E3F4F7B72D71C69F26E15B /* icon_256x256@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon_256x256@2x.png"; sourceTree = "<group>"; };
 		A32BB963BE2685D5364B725F /* VoiceInput.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoiceInput.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A993ECAE806E8A3F62C0B219 /* MainWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWorkspaceView.swift; sourceTree = "<group>"; };
+		B28E697AFE1FC243F538B1B1 /* CalendarAgent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarAgent.swift; sourceTree = "<group>"; };
 		B6A027CC3FB1FABDEF651326 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		BB6C80C1FF04B73F38DED098 /* CLIAgent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLIAgent.swift; sourceTree = "<group>"; };
 		BC0E9F80287DF7E80B62045E /* PolishClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PolishClient.swift; sourceTree = "<group>"; };
 		C8773015F95DC657A882B4FA /* VADetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VADetector.swift; sourceTree = "<group>"; };
 		C978F448B2598D04CA81053A /* WhisperEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhisperEngine.swift; sourceTree = "<group>"; };
@@ -123,6 +145,7 @@
 		EF0396A975D2D9A92D700312 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		F2786E5014483C069C334BCF /* icon_512x512.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = icon_512x512.png; sourceTree = "<group>"; };
 		F38DB9A79184B1CE226D4A25 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		FA478AB9015E90149B6ECE6E /* AppLauncherAgent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLauncherAgent.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -143,6 +166,17 @@
 				6151E0ECAD6171CCC569F437 /* VoiceInputIM.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		0EF76F597275772AF9BE3EFC /* Agents */ = {
+			isa = PBXGroup;
+			children = (
+				FA478AB9015E90149B6ECE6E /* AppLauncherAgent.swift */,
+				B28E697AFE1FC243F538B1B1 /* CalendarAgent.swift */,
+				BB6C80C1FF04B73F38DED098 /* CLIAgent.swift */,
+				300736F5B0F65C334276E135 /* NotesAgent.swift */,
+			);
+			path = Agents;
 			sourceTree = "<group>";
 		};
 		1176D7317DED4FA3C262D2EF /* AudioCapture */ = {
@@ -191,6 +225,7 @@
 				A993ECAE806E8A3F62C0B219 /* MainWorkspaceView.swift */,
 				CE4BA2116CF5E37551354478 /* OnboardingView.swift */,
 				B6A027CC3FB1FABDEF651326 /* SettingsView.swift */,
+				618789927E67EB00B7E30E2D /* VoiceTerminalService.swift */,
 			);
 			name = App;
 			path = Sources/App;
@@ -206,6 +241,7 @@
 				DE45F074BAF59ED598F88049 /* History */,
 				4930F554573E2CB1D1F3CCF5 /* Permissions */,
 				F3592D29FC64365C73837DA3 /* State */,
+				ACD8066AFC3B2549DBD13D57 /* Terminal */,
 				C42C4C6B74448E5BEDCC1788 /* TextProcessing */,
 				C5F72BEC95926496C4B21D3C /* UI */,
 				2996DBDA92C4109B0FFA2FE2 /* Whisper */,
@@ -262,6 +298,16 @@
 			path = AppIcon.appiconset;
 			sourceTree = "<group>";
 		};
+		ACD8066AFC3B2549DBD13D57 /* Terminal */ = {
+			isa = PBXGroup;
+			children = (
+				10AB8EE4BEEE0A1DD5A1D9F5 /* CommandRouter.swift */,
+				686FDBF4B208FA856BE83120 /* IntentRecognizer.swift */,
+				0EF76F597275772AF9BE3EFC /* Agents */,
+			);
+			path = Terminal;
+			sourceTree = "<group>";
+		};
 		C42C4C6B74448E5BEDCC1788 /* TextProcessing */ = {
 			isa = PBXGroup;
 			children = (
@@ -275,6 +321,7 @@
 			isa = PBXGroup;
 			children = (
 				608BE5F559F1180391F44847 /* InputStatusPanel.swift */,
+				17061A38F79122B41455B1F2 /* TerminalPanel.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -354,6 +401,9 @@
 					00C685423FAB53EE7EC78027 = {
 						ProvisioningStyle = Manual;
 					};
+					48ACF5FA6ECBC71A34114E9A = {
+						ProvisioningStyle = Manual;
+					};
 				};
 			};
 			buildConfigurationList = EE9E90117BEEEED3CF5BE462 /* Build configuration list for PBXProject "VoiceInput" */;
@@ -366,6 +416,7 @@
 			);
 			mainGroup = 8C2266E69DB8D72668BA6F67;
 			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 54;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -414,21 +465,28 @@
 			files = (
 				6FC44E73FEDE646F6A7C672F /* AccessibilityTrust.swift in Sources */,
 				1058A88F5BFDC34D0D458D6A /* AppBehaviorController.swift in Sources */,
+				546AB9DD465B14D3A2DB3A8B /* AppLauncherAgent.swift in Sources */,
 				9D508F008FF45A0BB0CE1578 /* AudioBufferManager.swift in Sources */,
 				BE8D626DF16A2409BD2B591B /* AudioCapture.swift in Sources */,
 				A361AB6FB7CFD84C1F61BF92 /* AudioCaptureManager.swift in Sources */,
 				E4D9336B33BCE2F001ED0BA4 /* AudioFormat.swift in Sources */,
 				622CE74D20212AEA1AD7B125 /* AudioRecorder.swift in Sources */,
+				279692E2ECD79B414B28E183 /* CLIAgent.swift in Sources */,
+				8D6068A62081C2E2192B69D8 /* CalendarAgent.swift in Sources */,
+				CBF7ABDDE7F9A5AE454A4FFA /* CommandRouter.swift in Sources */,
 				3D43D3F5BF91359B28BABBF4 /* HotkeyConfig.swift in Sources */,
 				5AF6D82341A88896A39285D7 /* InputHistoryStore.swift in Sources */,
 				58919CFC3380850752422173 /* InputStatusPanel.swift in Sources */,
+				C7A97B0389B91AD044849102 /* IntentRecognizer.swift in Sources */,
 				509CF63DA0819437F4C8190E /* MicrophonePermission.swift in Sources */,
+				EBA0FDF73D3FCF6135C1B354 /* NotesAgent.swift in Sources */,
 				45FA903F8857BFE08BED68E7 /* PermissionDiagnostics.swift in Sources */,
 				257768AD4D97BC179932EFA9 /* PolishClient.swift in Sources */,
 				502F48E747355F8FF19C8B7B /* RealtimeSessionStore.swift in Sources */,
 				CFA407B35CF133B480EE47E4 /* SceneDetector.swift in Sources */,
 				30DD792487A453C715984F91 /* SharedSettings.swift in Sources */,
 				862BD43EACBC5D9B384B9640 /* StreamingWhisperRecognizer.swift in Sources */,
+				4CD51FDA7204C75402EADCA1 /* TerminalPanel.swift in Sources */,
 				F5A7FA4F67803680C58D1393 /* TextProcessor.swift in Sources */,
 				B176C7D1E924504150F49F68 /* UserDictionary.swift in Sources */,
 				3E04ACA24654B125CCDD86FF /* VADetector.swift in Sources */,
@@ -446,16 +504,22 @@
 				9FEE6BC571BCC0D2C947277F /* AppBehaviorController.swift in Sources */,
 				D484D42CFE5BB11DEBDA47D7 /* AppDelegate.swift in Sources */,
 				8E91AC6E266AD4DBCBFFA8ED /* AppHotkeyVoiceService.swift in Sources */,
+				85754FA41979A3339AD3513F /* AppLauncherAgent.swift in Sources */,
 				E3B1DB6B384BEA8D3BEFD668 /* AudioBufferManager.swift in Sources */,
 				EB4AA78A88F83A0791AAA609 /* AudioCapture.swift in Sources */,
 				98C9779F7498DDCA5B10F4B6 /* AudioCaptureManager.swift in Sources */,
 				31B875618304590E5C5CC9C6 /* AudioFormat.swift in Sources */,
 				567825B7166858DBB63F822A /* AudioRecorder.swift in Sources */,
+				644B5BD191928F222DC07946 /* CLIAgent.swift in Sources */,
+				B1D5D0D61C0B2E1EABBBADF0 /* CalendarAgent.swift in Sources */,
+				ACD7A566E1D7A48665B82847 /* CommandRouter.swift in Sources */,
 				CC64119DB2BF22E08323A01E /* HotkeyConfig.swift in Sources */,
 				9DE7932079487957CD9C75CE /* InputHistoryStore.swift in Sources */,
 				2215682028C2479722DF04ED /* InputStatusPanel.swift in Sources */,
+				5AADE1B8B1AC2C26C750293B /* IntentRecognizer.swift in Sources */,
 				8ECE5D1A06CAC9951E6C2133 /* MainWorkspaceView.swift in Sources */,
 				6FFD194D3AD6AF7AEA8885DA /* MicrophonePermission.swift in Sources */,
+				399812D4CCA22002CBB760A0 /* NotesAgent.swift in Sources */,
 				0C598D64EA4EB8F951456260 /* OnboardingView.swift in Sources */,
 				7C741C1B636E137A1496D562 /* PermissionDiagnostics.swift in Sources */,
 				20B17CE5A237C744BB1F933A /* PolishClient.swift in Sources */,
@@ -464,9 +528,11 @@
 				FC3FBBA21E03BA75024AD2A1 /* SettingsView.swift in Sources */,
 				F88BF9C28EE46F1A96FA2B83 /* SharedSettings.swift in Sources */,
 				DA05A29F4ED152D399DCE013 /* StreamingWhisperRecognizer.swift in Sources */,
+				465D6652D1C42FBB475F4220 /* TerminalPanel.swift in Sources */,
 				EA7E8CE33DCE3752D97D36D0 /* TextProcessor.swift in Sources */,
 				BEACE7AB0F81E7C8ED693371 /* UserDictionary.swift in Sources */,
 				483F9CC58F587F3BC6E459F7 /* VADetector.swift in Sources */,
+				FE22E8F874BD857FC6BD98E9 /* VoiceTerminalService.swift in Sources */,
 				F71A332DA80628691D95716D /* WhisperEngine.swift in Sources */,
 				1B250ECB398DEB63323BFECE /* main.swift in Sources */,
 			);
@@ -479,12 +545,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGNING_REQUIRED = NO;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGNING_REQUIRED = YES;
+				CODE_SIGN_IDENTITY = "TerDesk Dev Code Signing";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = PHW3Y95345;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/App/Info.plist;
@@ -504,9 +568,10 @@
 					AVFoundation,
 					"-framework",
 					Carbon,
+					"-framework",
+					EventKit,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.voiceinput.macos;
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -638,12 +703,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGNING_REQUIRED = NO;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGNING_REQUIRED = YES;
+				CODE_SIGN_IDENTITY = "TerDesk Dev Code Signing";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = PHW3Y95345;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/App/Info.plist;
@@ -663,9 +726,10 @@
 					AVFoundation,
 					"-framework",
 					Carbon,
+					"-framework",
+					EventKit,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.voiceinput.macos;
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -674,12 +738,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGNING_REQUIRED = NO;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGNING_REQUIRED = YES;
+				CODE_SIGN_IDENTITY = "TerDesk Dev Code Signing";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = PHW3Y95345;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/IM/Info.plist;
@@ -702,7 +764,6 @@
 					AVFoundation,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.voiceinput.inputmethod;
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};
@@ -712,12 +773,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGNING_REQUIRED = NO;
-				CODE_SIGN_IDENTITY = "Apple Development";
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGNING_REQUIRED = YES;
+				CODE_SIGN_IDENTITY = "TerDesk Dev Code Signing";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
-				DEVELOPMENT_TEAM = PHW3Y95345;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Sources/IM/Info.plist;
@@ -740,7 +799,6 @@
 					AVFoundation,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.voiceinput.inputmethod;
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 			};

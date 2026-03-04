@@ -17,6 +17,7 @@ final class AppHotkeyVoiceService: NSObject {
     static let shared = AppHotkeyVoiceService()
 
     private var hotkeyRef: EventHotKeyRef?
+    private var terminalHotkeyRef: EventHotKeyRef?
     private var hotkeyHandlerInstalled = false
     private var keyConsumeTap: CFMachPort?
     private var keyConsumeTapSource: CFRunLoopSource?
@@ -128,6 +129,7 @@ final class AppHotkeyVoiceService: NSObject {
             activeHotkeyModifiers = UInt32(modifiers)
             teardownKeyConsumeTap()
             updateHotkeyRuntimeStatus("已注册: \(HotkeyConfig.modifierTitle(for: modifiers)) + \(HotkeyConfig.keyTitle(for: keyCode))")
+            registerTerminalHotkeyIfEnabled()
             return
         }
 
@@ -147,10 +149,44 @@ final class AppHotkeyVoiceService: NSObject {
             activeHotkeyModifiers = UInt32(fallbackModifiers)
             teardownKeyConsumeTap()
             updateHotkeyRuntimeStatus("原组合注册失败，已回退为 Option + Space")
+            registerTerminalHotkeyIfEnabled()
             return
         }
 
         updateHotkeyRuntimeStatus("热键注册失败: main=\(primaryStatus), fallback=\(fallbackStatus)")
+
+        registerTerminalHotkeyIfEnabled()
+    }
+
+    private func registerTerminalHotkeyIfEnabled() {
+        if let ref = terminalHotkeyRef {
+            UnregisterEventHotKey(ref)
+            terminalHotkeyRef = nil
+        }
+
+        let defaults = SharedSettings.defaults
+        let enabled = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyEnabled) as? Bool ?? false
+        guard enabled else { return }
+
+        let modifiers = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyModifiers) as? Int ?? controlKey
+        let keyCode = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyKeyCode) as? Int ?? 49
+
+        var hotKeyID = EventHotKeyID()
+        hotKeyID.signature = OSType(0x564F4943) // "VOIC"
+        hotKeyID.id = 2
+
+        var newRef: EventHotKeyRef?
+        let status = RegisterEventHotKey(
+            UInt32(keyCode),
+            UInt32(modifiers),
+            hotKeyID,
+            GetEventDispatcherTarget(),
+            0,
+            &newRef
+        )
+        if status == noErr {
+            terminalHotkeyRef = newRef
+        }
     }
 
     private func installHotkeyHandler() {
@@ -164,13 +200,35 @@ final class AppHotkeyVoiceService: NSObject {
             { _, event, _ in
                 guard let event else { return noErr }
                 let kind = GetEventKind(event)
+
+                var hotKeyID = EventHotKeyID()
+                let idStatus = GetEventParameter(
+                    event,
+                    EventParamName(kEventParamDirectObject),
+                    EventParamType(typeEventHotKeyID),
+                    nil,
+                    MemoryLayout<EventHotKeyID>.size,
+                    nil,
+                    &hotKeyID
+                )
+
+                let hotkeyIndex: UInt32 = (idStatus == noErr) ? hotKeyID.id : 1
+
                 if kind == UInt32(kEventHotKeyPressed) {
                     DispatchQueue.main.async {
-                        AppHotkeyVoiceService.activeService?.handleHotkeyPressed()
+                        if hotkeyIndex == 2 {
+                            VoiceTerminalService.shared.handleHotkeyPressed()
+                        } else {
+                            AppHotkeyVoiceService.activeService?.handleHotkeyPressed()
+                        }
                     }
                 } else if kind == UInt32(kEventHotKeyReleased) {
                     DispatchQueue.main.async {
-                        AppHotkeyVoiceService.activeService?.handleHotkeyReleased()
+                        if hotkeyIndex == 2 {
+                            VoiceTerminalService.shared.handleHotkeyReleased()
+                        } else {
+                            AppHotkeyVoiceService.activeService?.handleHotkeyReleased()
+                        }
                     }
                 }
                 return noErr
@@ -208,10 +266,16 @@ final class AppHotkeyVoiceService: NSObject {
         }
     }
 
+    var isMode1Active: Bool { isVoiceInputActive }
+
     private func unregisterGlobalHotkey() {
         if let hotkeyRef = hotkeyRef {
             UnregisterEventHotKey(hotkeyRef)
             self.hotkeyRef = nil
+        }
+        if let ref = terminalHotkeyRef {
+            UnregisterEventHotKey(ref)
+            terminalHotkeyRef = nil
         }
         teardownKeyConsumeTap()
     }
@@ -289,6 +353,9 @@ final class AppHotkeyVoiceService: NSObject {
     private func handleHotkeyPressed() {
         hotkeyPressBeganAt = Date().timeIntervalSince1970
         stopHandledOnPress = false
+
+        // Mutual exclusion: don't activate if Mode 2 is active
+        guard !VoiceTerminalService.shared.isMode2Active else { return }
 
         // Hold-to-talk model: key down starts recording, repeat keyDown while holding is ignored.
         if isVoiceInputActive {
@@ -602,15 +669,17 @@ final class AppHotkeyVoiceService: NSObject {
     }
 
     private func ensureAccessibilityPermission() async -> Bool {
-        if AccessibilityTrust.isTrusted(prompt: true) { return true }
+        if AccessibilityTrust.isTrusted(prompt: false) { return true }
 
-        // TCC sometimes updates with delay after user toggles switch.
+        // Stale TCC entry from previous build? Reset and re-prompt.
+        if AccessibilityTrust.resetAndReauthorize() { return true }
+
+        // Wait for user to toggle the switch in System Settings.
         for _ in 0..<20 {
             try? await Task.sleep(nanoseconds: 300_000_000)
             if AccessibilityTrust.isTrusted(prompt: false) { return true }
-            if PermissionDiagnostics.snapshot().accessibilityEffective { return true }
         }
-        return PermissionDiagnostics.snapshot().accessibilityEffective
+        return AccessibilityTrust.isTrusted(prompt: false)
     }
 
     private func reportError(_ kind: VoiceInputErrorKind, message: String) {

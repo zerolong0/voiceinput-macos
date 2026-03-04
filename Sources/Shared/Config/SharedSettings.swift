@@ -24,6 +24,9 @@ enum SharedSettings {
         static let interactionSoundEnabled = "interactionSoundEnabled"
         static let launchAtLoginEnabled = "launchAtLoginEnabled"
         static let showInDockEnabled = "showInDockEnabled"
+        static let terminalHotkeyEnabled = "terminalHotkeyEnabled"
+        static let terminalHotkeyModifiers = "terminalHotkeyModifiers"
+        static let terminalHotkeyKeyCode = "terminalHotkeyKeyCode"
     }
 
     static func bootstrapDefaults() {
@@ -73,13 +76,22 @@ enum SharedSettings {
             defaults.set(true, forKey: Keys.muteExternalAudioDuringInput)
         }
         if defaults.object(forKey: Keys.interactionSoundEnabled) == nil {
-            defaults.set(false, forKey: Keys.interactionSoundEnabled)
+            defaults.set(true, forKey: Keys.interactionSoundEnabled)
         }
         if defaults.object(forKey: Keys.launchAtLoginEnabled) == nil {
             defaults.set(false, forKey: Keys.launchAtLoginEnabled)
         }
         if defaults.object(forKey: Keys.showInDockEnabled) == nil {
             defaults.set(true, forKey: Keys.showInDockEnabled)
+        }
+        if defaults.object(forKey: Keys.terminalHotkeyEnabled) == nil {
+            defaults.set(false, forKey: Keys.terminalHotkeyEnabled)
+        }
+        if defaults.object(forKey: Keys.terminalHotkeyModifiers) == nil {
+            defaults.set(4096, forKey: Keys.terminalHotkeyModifiers)
+        }
+        if defaults.object(forKey: Keys.terminalHotkeyKeyCode) == nil {
+            defaults.set(49, forKey: Keys.terminalHotkeyKeyCode)
         }
     }
 }

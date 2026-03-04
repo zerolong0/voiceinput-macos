@@ -18,9 +18,15 @@ struct SettingsView: View {
     @State private var llmModel = "gemini-2.5-flash-lite"
     @State private var saveHistoryEnabled = true
     @State private var muteExternalAudioDuringInput = true
-    @State private var interactionSoundEnabled = false
+    @State private var interactionSoundEnabled = true
     @State private var launchAtLoginEnabled = false
     @State private var showInDockEnabled = true
+    @State private var terminalHotkeyEnabled = false
+    @State private var terminalHotkeyModifiers = 4096 // controlKey
+    @State private var terminalHotkeyKeyCode = 49 // Space
+    @State private var isCapturingTerminalHotkey = false
+    @State private var terminalHotkeyCaptureHint = "点击快捷键框后直接按键盘录入"
+    @State private var localTerminalKeyMonitor: Any?
     @State private var showAdvancedLLM = false
     @State private var launchAtLoginMessage = ""
     @State private var isCapturingHotkey = false
@@ -118,6 +124,53 @@ struct SettingsView: View {
                         }
                     }
 
+                    // 语音终端
+                    SettingsSection(title: "语音终端 (Mode 2)", icon: "terminal") {
+                        Toggle("启用语音终端", isOn: $terminalHotkeyEnabled)
+                            .toggleStyle(.switch)
+
+                        Button {
+                            if isCapturingTerminalHotkey {
+                                stopTerminalHotkeyCapture()
+                            } else {
+                                startTerminalHotkeyCapture()
+                            }
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("终端激活按键")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Text(isCapturingTerminalHotkey ? "请直接按下快捷键..." : terminalHotkeyDescription)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(.primary)
+                                }
+                                Spacer()
+                                Image(systemName: isCapturingTerminalHotkey ? "keyboard.badge.ellipsis" : "keyboard")
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .fill(Color.secondary.opacity(0.12))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .stroke(isCapturingTerminalHotkey ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Text(terminalHotkeyCaptureHint)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Text("按住快捷键说话，松开后 AI 识别意图并执行（日历/笔记/打开App/命令）。")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
                     // 输入风格
                     SettingsSection(title: "输入风格", icon: "wand.and.stars") {
                         VStack(spacing: 8) {
@@ -182,7 +235,7 @@ struct SettingsView: View {
                             .toggleStyle(.switch)
                         Toggle("交互提示音", isOn: $interactionSoundEnabled)
                             .toggleStyle(.switch)
-                        Text("提示音能力预留，当前版本默认关闭。")
+                        Text("语音终端各阶段播放系统提示音 (聆听/确认/成功/失败)。")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -310,6 +363,15 @@ struct SettingsView: View {
         .onChange(of: hotkeyHoldToStopThreshold) { _ in
             syncToSharedDefaults()
         }
+        .onChange(of: terminalHotkeyEnabled) { _ in
+            syncToSharedDefaults()
+        }
+        .onChange(of: terminalHotkeyModifiers) { _ in
+            syncToSharedDefaults()
+        }
+        .onChange(of: terminalHotkeyKeyCode) { _ in
+            syncToSharedDefaults()
+        }
         .onChange(of: llmEnabled) { _ in
             syncToSharedDefaults()
         }
@@ -341,6 +403,7 @@ struct SettingsView: View {
         }
         .onDisappear {
             stopHotkeyCapture()
+            stopTerminalHotkeyCapture()
         }
     }
 
@@ -365,6 +428,9 @@ struct SettingsView: View {
         hotkeyModifiers = defaults.object(forKey: SharedSettings.Keys.hotkeyModifiers) as? Int ?? hotkeyModifiers
         hotkeyKeyCode = defaults.object(forKey: SharedSettings.Keys.hotkeyKeyCode) as? Int ?? hotkeyKeyCode
         hotkeyHoldToStopThreshold = defaults.object(forKey: SharedSettings.Keys.hotkeyHoldToStopThreshold) as? Double ?? hotkeyHoldToStopThreshold
+        terminalHotkeyEnabled = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyEnabled) as? Bool ?? false
+        terminalHotkeyModifiers = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyModifiers) as? Int ?? 4096
+        terminalHotkeyKeyCode = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyKeyCode) as? Int ?? 49
         llmEnabled = defaults.object(forKey: SharedSettings.Keys.llmEnabled) as? Bool ?? false
         llmAPIBaseURL = defaults.string(forKey: SharedSettings.Keys.llmAPIBaseURL) ?? llmAPIBaseURL
         llmAPIKey = defaults.string(forKey: SharedSettings.Keys.llmAPIKey) ?? llmAPIKey
@@ -385,6 +451,9 @@ struct SettingsView: View {
         defaults.set(hotkeyModifiers, forKey: SharedSettings.Keys.hotkeyModifiers)
         defaults.set(hotkeyKeyCode, forKey: SharedSettings.Keys.hotkeyKeyCode)
         defaults.set(hotkeyHoldToStopThreshold, forKey: SharedSettings.Keys.hotkeyHoldToStopThreshold)
+        defaults.set(terminalHotkeyEnabled, forKey: SharedSettings.Keys.terminalHotkeyEnabled)
+        defaults.set(terminalHotkeyModifiers, forKey: SharedSettings.Keys.terminalHotkeyModifiers)
+        defaults.set(terminalHotkeyKeyCode, forKey: SharedSettings.Keys.terminalHotkeyKeyCode)
         defaults.set(llmEnabled, forKey: SharedSettings.Keys.llmEnabled)
         defaults.set(llmAPIBaseURL, forKey: SharedSettings.Keys.llmAPIBaseURL)
         defaults.set(llmAPIKey, forKey: SharedSettings.Keys.llmAPIKey)
@@ -452,6 +521,47 @@ struct SettingsView: View {
         if let monitor = localKeyMonitor {
             NSEvent.removeMonitor(monitor)
             localKeyMonitor = nil
+        }
+    }
+
+    private var terminalHotkeyDescription: String {
+        "\(HotkeyConfig.modifierTitle(for: terminalHotkeyModifiers)) + \(HotkeyConfig.keyTitle(for: terminalHotkeyKeyCode))"
+    }
+
+    private func startTerminalHotkeyCapture() {
+        stopTerminalHotkeyCapture()
+        isCapturingTerminalHotkey = true
+        terminalHotkeyCaptureHint = "正在录入，按下任意键完成（Esc 取消）"
+
+        localTerminalKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
+            guard isCapturingTerminalHotkey else { return event }
+            if event.keyCode == 53 {
+                terminalHotkeyCaptureHint = "已取消录入"
+                stopTerminalHotkeyCapture()
+                return nil
+            }
+            let modifiers = event.modifierFlags.intersection([.option, .command, .control, .shift])
+            let modifierFlags = HotkeyConfig.carbonFlags(from: modifiers)
+            let keyCode = Int(event.keyCode)
+            let validation = HotkeyConfig.validate(modifiers: modifierFlags, keyCode: keyCode)
+            guard validation.isValid else {
+                terminalHotkeyCaptureHint = validation.message ?? "快捷键无效"
+                return nil
+            }
+
+            terminalHotkeyModifiers = modifierFlags
+            terminalHotkeyKeyCode = keyCode
+            terminalHotkeyCaptureHint = "已保存：\(terminalHotkeyDescription)"
+            stopTerminalHotkeyCapture()
+            return nil
+        }
+    }
+
+    private func stopTerminalHotkeyCapture() {
+        isCapturingTerminalHotkey = false
+        if let monitor = localTerminalKeyMonitor {
+            NSEvent.removeMonitor(monitor)
+            localTerminalKeyMonitor = nil
         }
     }
 

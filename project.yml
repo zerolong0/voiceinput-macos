@@ -30,8 +30,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.voiceinput.macos
         INFOPLIST_FILE: Sources/App/Info.plist
-        CODE_SIGN_IDENTITY: "-"
-        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGN_IDENTITY: "TerDesk Dev Code Signing"
+        CODE_SIGNING_REQUIRED: "YES"
         CODE_SIGN_STYLE: Manual
         ENABLE_HARDENED_RUNTIME: "YES"
         OTHER_CODE_SIGN_FLAGS: "--deep"
@@ -52,6 +52,8 @@ targets:
           - "AVFoundation"
           - "-framework"
           - "Carbon"
+          - "-framework"
+          - "EventKit"
 
   # 输入法 - 语音输入
   VoiceInputIM:
@@ -66,8 +68,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.voiceinput.inputmethod
         INFOPLIST_FILE: Sources/IM/Info.plist
-        CODE_SIGN_IDENTITY: "-"
-        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGN_IDENTITY: "TerDesk Dev Code Signing"
+        CODE_SIGNING_REQUIRED: "YES"
         CODE_SIGN_STYLE: Manual
         ENABLE_HARDENED_RUNTIME: "YES"
         OTHER_CODE_SIGN_FLAGS: "--deep"
