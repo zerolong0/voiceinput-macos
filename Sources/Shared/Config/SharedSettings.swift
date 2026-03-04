@@ -16,6 +16,9 @@ enum SharedSettings {
         static let llmAPIBaseURL = "llmAPIBaseURL"
         static let llmAPIKey = "llmAPIKey"
         static let llmModel = "llmModel"
+        static let llmMaxTokens = "llmMaxTokens"
+        static let llmTimeoutSeconds = "llmTimeoutSeconds"
+        static let llmRetryCount = "llmRetryCount"
         static let saveHistoryEnabled = "saveHistoryEnabled"
         static let muteExternalAudioDuringInput = "muteExternalAudioDuringInput"
         static let interactionSoundEnabled = "interactionSoundEnabled"
@@ -53,6 +56,15 @@ enum SharedSettings {
         }
         if defaults.string(forKey: Keys.llmModel)?.isEmpty ?? true {
             defaults.set("gemini-2.5-flash-lite", forKey: Keys.llmModel)
+        }
+        if defaults.object(forKey: Keys.llmMaxTokens) == nil {
+            defaults.set(2048, forKey: Keys.llmMaxTokens)
+        }
+        if defaults.object(forKey: Keys.llmTimeoutSeconds) == nil {
+            defaults.set(30.0, forKey: Keys.llmTimeoutSeconds)
+        }
+        if defaults.object(forKey: Keys.llmRetryCount) == nil {
+            defaults.set(2, forKey: Keys.llmRetryCount)
         }
         if defaults.object(forKey: Keys.saveHistoryEnabled) == nil {
             defaults.set(true, forKey: Keys.saveHistoryEnabled)

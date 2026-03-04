@@ -71,14 +71,14 @@ final class PolishClient {
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 15
+        request.timeoutInterval = effectiveTimeout(for: text)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.httpBody = try JSONEncoder().encode(
             PolishRequest(text: text, style: style, model: model)
         )
 
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await performRequestWithRetry(request, retryCount: configuredRetryCount())
         guard let http = response as? HTTPURLResponse else {
             throw PolishClientError.badStatus(-1)
         }
@@ -106,17 +106,17 @@ final class PolishClient {
                 .init(role: "user", content: text)
             ],
             temperature: 0.1,
-            max_tokens: 512
+            max_tokens: effectiveMaxTokens(for: text)
         )
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 15
+        request.timeoutInterval = effectiveTimeout(for: text)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.httpBody = try JSONEncoder().encode(req)
 
-        let (data, response) = try await session.data(for: request)
+        let (data, response) = try await performRequestWithRetry(request, retryCount: configuredRetryCount())
         guard let http = response as? HTTPURLResponse else {
             throw PolishClientError.badStatus(-1)
         }
@@ -278,5 +278,51 @@ final class PolishClient {
             }
         }
         return Array(Set(tokens)).prefix(20).map { String($0) }
+    }
+
+    private func configuredMaxTokens() -> Int {
+        let raw = SharedSettings.defaults.object(forKey: SharedSettings.Keys.llmMaxTokens) as? Int ?? 2048
+        return min(4096, max(512, raw))
+    }
+
+    private func configuredBaseTimeoutSeconds() -> Double {
+        let raw = SharedSettings.defaults.object(forKey: SharedSettings.Keys.llmTimeoutSeconds) as? Double ?? 30
+        return min(90, max(15, raw))
+    }
+
+    private func configuredRetryCount() -> Int {
+        let raw = SharedSettings.defaults.object(forKey: SharedSettings.Keys.llmRetryCount) as? Int ?? 2
+        return min(4, max(0, raw))
+    }
+
+    private func effectiveMaxTokens(for text: String) -> Int {
+        let base = configuredMaxTokens()
+        if text.count > 2200 { return max(base, 4096) }
+        if text.count > 1200 { return max(base, 3072) }
+        return base
+    }
+
+    private func effectiveTimeout(for text: String) -> TimeInterval {
+        let base = configuredBaseTimeoutSeconds()
+        if text.count > 2200 { return max(base, 60) }
+        if text.count > 1200 { return max(base, 45) }
+        return base
+    }
+
+    private func performRequestWithRetry(_ request: URLRequest, retryCount: Int) async throws -> (Data, URLResponse) {
+        var lastError: Error?
+        var attempts = 0
+        while attempts <= retryCount {
+            do {
+                return try await session.data(for: request)
+            } catch {
+                lastError = error
+                attempts += 1
+                if attempts > retryCount { break }
+                let delayNanos: UInt64 = attempts == 1 ? 300_000_000 : 700_000_000
+                try? await Task.sleep(nanoseconds: delayNanos)
+            }
+        }
+        throw lastError ?? PolishClientError.decodeFailed
     }
 }

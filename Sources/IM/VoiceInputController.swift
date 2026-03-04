@@ -201,9 +201,8 @@ class VoiceInputController: IMKInputController {
         hotkeyPressBeganAt = Date().timeIntervalSince1970
         stopHandledOnPress = false
 
+        // Hold-to-talk model: key down starts recording, repeat keyDown while holding is ignored.
         if isVoiceInputActive {
-            stopHandledOnPress = true
-            deactivateVoiceInput()
             return
         }
         activateVoiceInput()
@@ -211,9 +210,9 @@ class VoiceInputController: IMKInputController {
 
     /// Handle hotkey release
     private func handleHotkeyReleased() {
-        let heldDuration = Date().timeIntervalSince1970 - hotkeyPressBeganAt
         defer { stopHandledOnPress = false }
-        if isVoiceInputActive && !stopHandledOnPress && heldDuration >= holdToStopThreshold {
+        // Hold-to-talk model: key up always ends recording if active.
+        if isVoiceInputActive && !stopHandledOnPress {
             deactivateVoiceInput()
         }
     }

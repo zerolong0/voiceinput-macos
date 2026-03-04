@@ -290,9 +290,8 @@ final class AppHotkeyVoiceService: NSObject {
         hotkeyPressBeganAt = Date().timeIntervalSince1970
         stopHandledOnPress = false
 
+        // Hold-to-talk model: key down starts recording, repeat keyDown while holding is ignored.
         if isVoiceInputActive {
-            stopHandledOnPress = true
-            stopRecordingAndProcess()
             return
         }
 
@@ -307,17 +306,16 @@ final class AppHotkeyVoiceService: NSObject {
     }
 
     private func handleHotkeyReleased() {
-        let heldDuration = Date().timeIntervalSince1970 - hotkeyPressBeganAt
         defer { stopHandledOnPress = false }
 
-        if isVoiceInputActive && !stopHandledOnPress && heldDuration >= holdToStopThreshold {
+        // Hold-to-talk model: key up always ends recording if active.
+        if isVoiceInputActive && !stopHandledOnPress {
             stopRecordingAndProcess()
             return
         }
 
-        // If release happens while we are still arming (permissions/startup),
-        // remember the long-press intent and stop immediately after activation.
-        if !isVoiceInputActive && heldDuration >= holdToStopThreshold {
+        // If key is released while still arming, stop immediately after activation.
+        if !isVoiceInputActive {
             pendingStopAfterActivation = true
         }
     }

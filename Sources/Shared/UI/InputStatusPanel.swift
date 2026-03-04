@@ -462,7 +462,7 @@ final class InputStatusPanel {
 
     private func visibleTextForListening(_ text: String) -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return "请开始说话" }
+        guard !trimmed.isEmpty else { return "按住说话，松开结束" }
         let font = NSFont.systemFont(ofSize: 15, weight: .semibold)
         let attrs: [NSAttributedString.Key: Any] = [.font: font]
         let viewport = ("汉汉汉汉汉汉汉汉汉汉" as NSString).size(withAttributes: attrs).width
