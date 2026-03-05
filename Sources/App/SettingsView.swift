@@ -44,6 +44,9 @@ struct SettingsView: View {
     @State private var localKeyMonitor: Any?
     @State private var customRewritePrompt = ""
     @State private var customIntentPrompt = ""
+    @State private var showRewritePromptSheet = false
+    @State private var showIntentPromptSheet = false
+    @State private var showAPIKey = false
 
     // 权限状态
     @State private var micGranted = false
@@ -115,6 +118,26 @@ struct SettingsView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 20)
             }
+        }
+        .sheet(isPresented: $showRewritePromptSheet) {
+            PromptEditorSheet(
+                title: "自定义改写提示词",
+                initialText: customRewritePrompt.isEmpty
+                    ? PolishClient.defaultSystemPrompt(for: selectedStyle)
+                    : customRewritePrompt,
+                savedValue: $customRewritePrompt,
+                warningText: nil
+            )
+        }
+        .sheet(isPresented: $showIntentPromptSheet) {
+            PromptEditorSheet(
+                title: "自定义意图识别提示词",
+                initialText: customIntentPrompt.isEmpty
+                    ? IntentRecognizer.defaultSystemPrompt
+                    : customIntentPrompt,
+                savedValue: $customIntentPrompt,
+                warningText: "修改意图提示词需要保持 JSON 输出格式不变，否则意图识别将无法正常工作。"
+            )
         }
         .frame(
             minWidth: embedded ? 720 : 520,
@@ -248,8 +271,23 @@ struct SettingsView: View {
                         Text("API Key")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        SecureField("Bearer token (>=10 chars)", text: $llmAPIKey)
-                            .textFieldStyle(.roundedBorder)
+                        HStack(spacing: 4) {
+                            if showAPIKey {
+                                TextField("Bearer token (>=10 chars)", text: $llmAPIKey)
+                                    .textFieldStyle(.roundedBorder)
+                                    .textSelection(.enabled)
+                            } else {
+                                SecureField("Bearer token (>=10 chars)", text: $llmAPIKey)
+                                    .textFieldStyle(.roundedBorder)
+                            }
+                            Button {
+                                showAPIKey.toggle()
+                            } label: {
+                                Image(systemName: showAPIKey ? "eye.slash" : "eye")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.borderless)
+                        }
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
@@ -266,35 +304,21 @@ struct SettingsView: View {
 
         // 自定义改写提示词
         SettingsSection(title: "自定义改写提示词", icon: "text.quote") {
-            promptStatusLabel(isEmpty: customRewritePrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-
-            DisclosureGroup("编辑提示词") {
-                VStack(alignment: .leading, spacing: 8) {
-                    TextEditor(text: $customRewritePrompt)
-                        .font(.system(.body, design: .monospaced))
-                        .frame(minHeight: 120)
-                        .border(Color.secondary.opacity(0.3), width: 1)
-
-                    HStack(spacing: 8) {
-                        Button("恢复默认") {
-                            customRewritePrompt = ""
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-
-                        Button("查看当前默认") {
-                            customRewritePrompt = PolishClient.defaultSystemPrompt(for: selectedStyle)
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    }
-
-                    Text("清空后自动使用内置默认提示词。填入自定义内容后将替代默认提示词进行改写。")
+            HStack {
+                promptStatusLabel(isEmpty: customRewritePrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Spacer()
+                Button {
+                    showRewritePromptSheet = true
+                } label: {
+                    Label("编辑", systemImage: "square.and.pencil")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
                 }
-                .padding(.top, 8)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
+            Text("清空后自动使用内置默认提示词。填入自定义内容后将替代默认提示词进行改写。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -343,39 +367,25 @@ struct SettingsView: View {
 
         // 自定义意图识别提示词
         SettingsSection(title: "自定义意图识别提示词", icon: "text.quote") {
-            promptStatusLabel(isEmpty: customIntentPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-
-            DisclosureGroup("编辑提示词") {
-                VStack(alignment: .leading, spacing: 8) {
-                    TextEditor(text: $customIntentPrompt)
-                        .font(.system(.body, design: .monospaced))
-                        .frame(minHeight: 120)
-                        .border(Color.secondary.opacity(0.3), width: 1)
-
-                    HStack(spacing: 8) {
-                        Button("恢复默认") {
-                            customIntentPrompt = ""
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-
-                        Button("查看当前默认") {
-                            customIntentPrompt = IntentRecognizer.defaultSystemPrompt
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                    }
-
-                    HStack(spacing: 4) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-                            .font(.caption)
-                        Text("修改意图提示词需要保持 JSON 输出格式不变，否则意图识别将无法正常工作。")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
-                    }
+            HStack {
+                promptStatusLabel(isEmpty: customIntentPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Spacer()
+                Button {
+                    showIntentPromptSheet = true
+                } label: {
+                    Label("编辑", systemImage: "square.and.pencil")
+                        .font(.caption)
                 }
-                .padding(.top, 8)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+            HStack(spacing: 4) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                    .font(.caption)
+                Text("修改意图提示词需要保持 JSON 输出格式不变，否则意图识别将无法正常工作。")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
             }
         }
     }
@@ -693,7 +703,10 @@ struct SettingsView: View {
     }
 
     private var terminalHotkeyDescription: String {
-        "\(HotkeyConfig.modifierTitle(for: terminalHotkeyModifiers)) + \(HotkeyConfig.keyTitle(for: terminalHotkeyKeyCode))"
+        if terminalHotkeyModifiers == 0 {
+            return HotkeyConfig.keyTitle(for: terminalHotkeyKeyCode)
+        }
+        return "\(HotkeyConfig.modifierTitle(for: terminalHotkeyModifiers)) + \(HotkeyConfig.keyTitle(for: terminalHotkeyKeyCode))"
     }
 
     private func startTerminalHotkeyCapture() {
@@ -853,6 +866,68 @@ struct HistoryItemCard: View {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+    }
+}
+
+// MARK: - Prompt Editor Sheet
+
+private struct PromptEditorSheet: View {
+    let title: String
+    let initialText: String
+    @Binding var savedValue: String
+    let warningText: String?
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var editBuffer = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text(title)
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                Spacer()
+                Button("取消") { dismiss() }
+                    .buttonStyle(.bordered)
+                Button("保存") {
+                    savedValue = editBuffer
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.return, modifiers: .command)
+            }
+
+            TextEditor(text: $editBuffer)
+                .font(.system(.body, design: .monospaced))
+                .frame(minHeight: 300)
+                .border(Color.secondary.opacity(0.3), width: 1)
+
+            HStack(spacing: 8) {
+                Button("清除自定义（恢复默认）") {
+                    savedValue = ""
+                    dismiss()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Spacer()
+
+                if let warning = warningText {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .font(.caption)
+                        Text(warning)
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                            .frame(maxWidth: 320)
+                    }
+                }
+            }
+        }
+        .padding(24)
+        .frame(minWidth: 540, minHeight: 440)
+        .onAppear { editBuffer = initialText }
     }
 }
 

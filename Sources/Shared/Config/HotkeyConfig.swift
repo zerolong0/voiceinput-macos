@@ -76,16 +76,9 @@ enum HotkeyConfig {
             return (false, "无效按键")
         }
         if isModifierOnlyKeyCode(keyCode) {
-            return (false, "请搭配一个非修饰键")
+            return (false, "请搭配一个非修饰键（如 F6、Space、B 等）")
         }
-
-        // Disallow Command-based hotkeys to avoid triggering foreground-app
-        // shortcuts (for example browser/app command bindings).
-        let isCommand = (modifiers & cmdKey) != 0
-        if isCommand {
-            return (false, "不支持 Command 组合。请使用 Option / Control / Shift 组合")
-        }
-
+        // 单键（无修饰键）直接通过，Carbon RegisterEventHotKey 支持单键注册
         return (true, nil)
     }
 }

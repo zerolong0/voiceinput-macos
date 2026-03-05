@@ -112,7 +112,7 @@ final class AppHotkeyVoiceService: NSObject {
         var modifiers = defaults.object(forKey: SharedSettings.Keys.hotkeyModifiers) as? Int ?? OptionSetFlag.optionSpaceModifiers.rawValue
         var keyCode = defaults.object(forKey: SharedSettings.Keys.hotkeyKeyCode) as? Int ?? OptionSetFlag.spaceKeyCode.rawValue
         let validation = HotkeyConfig.validate(modifiers: modifiers, keyCode: keyCode)
-        if !validation.isValid || (modifiers & cmdKey) != 0 {
+        if !validation.isValid {
             modifiers = OptionSetFlag.optionSpaceModifiers.rawValue
             keyCode = OptionSetFlag.spaceKeyCode.rawValue
             defaults.set(modifiers, forKey: SharedSettings.Keys.hotkeyModifiers)
@@ -602,6 +602,11 @@ final class AppHotkeyVoiceService: NSObject {
             return true
         }
 
+        // AX insertion failed — only attempt Cmd+V if focused element looks editable
+        guard isAXEditable(focused) || isLikelyEditableByRole(focused) else {
+            return false
+        }
+
         let pasteboard = NSPasteboard.general
         let original = pasteboard.string(forType: .string)
         pasteboard.clearContents()
@@ -625,7 +630,22 @@ final class AppHotkeyVoiceService: NSObject {
                 pasteboard.setString(original, forType: .string)
             }
         }
+        // Cmd+V was attempted but success is not guaranteed — show brief tip
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+            self?.statusPanel.show(status: "已输入 ✓", text: "如未成功请点击复制后手动粘贴", showCopy: true)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+                self?.statusPanel.hide()
+            }
+        }
         return true
+    }
+
+    private func isLikelyEditableByRole(_ element: AXUIElement) -> Bool {
+        var roleRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success,
+              let role = roleRef as? String else { return false }
+        let editableRoles: Set<String> = ["AXTextField", "AXTextArea", "AXSearchField", "AXComboBox"]
+        return editableRoles.contains(role)
     }
 
     private func focusedElement() -> AXUIElement? {
