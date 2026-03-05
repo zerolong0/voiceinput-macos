@@ -29,7 +29,23 @@ enum SharedSettings {
         static let terminalHotkeyKeyCode = "terminalHotkeyKeyCode"
         static let customRewritePrompt = "customRewritePrompt"
         static let customIntentPrompt = "customIntentPrompt"
+        static let agentModel = "agentModel"
+        static let voiceInputModel = "voiceInputModel"
     }
+
+    static func customRewritePromptKey(for style: String) -> String {
+        "customRewritePrompt_\(style)"
+    }
+
+    static let presetModels: [(id: String, label: String)] = [
+        ("gemini-2.5-flash",      "Gemini 2.5 Flash"),
+        ("gemini-2.5-flash-lite", "Gemini 2.5 Flash Lite（默认快速）"),
+        ("gemini-2.5-pro",        "Gemini 2.5 Pro"),
+        ("gpt-4o",                "GPT-4o"),
+        ("gpt-4o-mini",           "GPT-4o Mini"),
+        ("claude-sonnet-4-6",     "Claude Sonnet 4.6"),
+        ("claude-haiku-4-5",      "Claude Haiku 4.5"),
+    ]
 
     static func bootstrapDefaults() {
         if defaults.object(forKey: Keys.selectedStyle) == nil {
@@ -100,6 +116,14 @@ enum SharedSettings {
         }
         if defaults.string(forKey: Keys.customIntentPrompt) == nil {
             defaults.set("", forKey: Keys.customIntentPrompt)
+        }
+        if defaults.string(forKey: Keys.agentModel)?.isEmpty ?? true {
+            // Migrate from llmModel if present, otherwise use default
+            let migrated = defaults.string(forKey: Keys.llmModel) ?? "gemini-2.5-flash"
+            defaults.set(migrated, forKey: Keys.agentModel)
+        }
+        if defaults.string(forKey: Keys.voiceInputModel)?.isEmpty ?? true {
+            defaults.set("gemini-2.5-flash-lite", forKey: Keys.voiceInputModel)
         }
     }
 }

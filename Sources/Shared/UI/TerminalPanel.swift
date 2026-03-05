@@ -10,6 +10,7 @@ enum TerminalPanelState {
     case executing(RecognizedIntent)
     case success(String)
     case error(String)
+    case richContent(AgentResponse)
 }
 
 final class TerminalPanel {
@@ -23,6 +24,15 @@ final class TerminalPanel {
     private var waveBars: [CALayer] = []
     private let titleLabel = NSTextField(labelWithString: "")
     private let subtitleLabel = NSTextField(labelWithString: "")
+
+    // Rich content
+    private let richScrollView = NSScrollView()
+    private let richBodyLabel = NSTextField(labelWithString: "")
+    private let richCloseButton = NSButton(title: "✕", target: nil, action: nil)
+    private let richCopyButton = NSButton(title: "复制", target: nil, action: nil)
+    private let richActionBar = NSStackView()
+    private var richHideTimer: Timer?
+    private var richBody: String = ""
 
     // Buttons
     private let buttonBar = NSStackView()
@@ -158,6 +168,61 @@ final class TerminalPanel {
         fallbackStack.addArrangedSubview(cancelButton)
         fallbackStack.isHidden = true
 
+        // Rich content scroll view
+        richBodyLabel.translatesAutoresizingMaskIntoConstraints = false
+        richBodyLabel.font = .systemFont(ofSize: 12, weight: .regular)
+        richBodyLabel.textColor = .labelColor
+        richBodyLabel.maximumNumberOfLines = 0
+        richBodyLabel.lineBreakMode = .byWordWrapping
+        richBodyLabel.isSelectable = true
+
+        richScrollView.translatesAutoresizingMaskIntoConstraints = false
+        richScrollView.hasVerticalScroller = true
+        richScrollView.hasHorizontalScroller = false
+        richScrollView.autohidesScrollers = true
+        richScrollView.borderType = .noBorder
+        richScrollView.backgroundColor = .clear
+        richScrollView.drawsBackground = false
+        richScrollView.isHidden = true
+
+        let clipView = richScrollView.contentView
+        let documentView = NSView()
+        documentView.translatesAutoresizingMaskIntoConstraints = false
+        richScrollView.documentView = documentView
+        documentView.addSubview(richBodyLabel)
+
+        NSLayoutConstraint.activate([
+            richBodyLabel.topAnchor.constraint(equalTo: documentView.topAnchor, constant: 4),
+            richBodyLabel.leadingAnchor.constraint(equalTo: documentView.leadingAnchor),
+            richBodyLabel.trailingAnchor.constraint(equalTo: documentView.trailingAnchor),
+            richBodyLabel.bottomAnchor.constraint(equalTo: documentView.bottomAnchor, constant: -4),
+            documentView.widthAnchor.constraint(equalTo: clipView.widthAnchor),
+        ])
+
+        richCloseButton.translatesAutoresizingMaskIntoConstraints = false
+        richCloseButton.bezelStyle = .rounded
+        richCloseButton.controlSize = .mini
+        richCloseButton.font = .systemFont(ofSize: 11)
+        richCloseButton.target = self
+        richCloseButton.action = #selector(richCloseAction)
+        richCloseButton.isHidden = true
+
+        richCopyButton.translatesAutoresizingMaskIntoConstraints = false
+        richCopyButton.bezelStyle = .rounded
+        richCopyButton.controlSize = .mini
+        richCopyButton.font = .systemFont(ofSize: 11)
+        richCopyButton.target = self
+        richCopyButton.action = #selector(richCopyAction)
+        richCopyButton.isHidden = true
+
+        richActionBar.translatesAutoresizingMaskIntoConstraints = false
+        richActionBar.orientation = .horizontal
+        richActionBar.spacing = 6
+        richActionBar.addArrangedSubview(NSView()) // spacer
+        richActionBar.addArrangedSubview(richCopyButton)
+        richActionBar.addArrangedSubview(richCloseButton)
+        richActionBar.isHidden = true
+
         root.addSubview(card)
         card.addSubview(iconView)
         card.addSubview(waveView)
@@ -165,6 +230,8 @@ final class TerminalPanel {
         card.addSubview(subtitleLabel)
         card.addSubview(buttonBar)
         card.addSubview(fallbackStack)
+        card.addSubview(richScrollView)
+        card.addSubview(richActionBar)
 
         heightConstraint = card.heightAnchor.constraint(equalToConstant: 44)
         titleCenterYConstraint = titleLabel.centerYAnchor.constraint(equalTo: card.centerYAnchor)
@@ -206,6 +273,16 @@ final class TerminalPanel {
             fallbackStack.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 6),
             fallbackStack.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
             fallbackStack.trailingAnchor.constraint(lessThanOrEqualTo: card.trailingAnchor, constant: -14),
+
+            richScrollView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 6),
+            richScrollView.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
+            richScrollView.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
+            richScrollView.bottomAnchor.constraint(equalTo: richActionBar.topAnchor, constant: -6),
+
+            richActionBar.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -8),
+            richActionBar.leadingAnchor.constraint(equalTo: card.leadingAnchor, constant: 14),
+            richActionBar.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -14),
+            richActionBar.heightAnchor.constraint(equalToConstant: 22),
         ])
     }
 
@@ -333,6 +410,29 @@ final class TerminalPanel {
                 self?.hide()
             }
 
+        case .richContent(let response):
+            richBody = response.body
+            applyExpandedLayout()
+            stopWaveAnimation()
+            iconView.image = NSImage(systemSymbolName: "text.bubble", accessibilityDescription: nil)
+            iconView.contentTintColor = .controlAccentColor
+            iconView.isHidden = false
+            titleLabel.stringValue = response.title
+            titleLabel.textColor = .labelColor
+            subtitleLabel.isHidden = true
+            hideAllButtons()
+            richBodyLabel.stringValue = response.body
+            richScrollView.isHidden = false
+            richCopyButton.isHidden = false
+            richCloseButton.isHidden = false
+            richActionBar.isHidden = false
+            let panelHeight = min(360, max(160, 44 + estimatedBodyHeight(response.body) + 40))
+            relayout(width: 340, height: panelHeight)
+            showPanel()
+            playSound("Glass")
+            removeKeyMonitor()
+            startRichHideTimer()
+
         case .idle:
             hide()
         }
@@ -366,6 +466,8 @@ final class TerminalPanel {
     func hide() {
         autoHideTimer?.invalidate()
         autoHideTimer = nil
+        richHideTimer?.invalidate()
+        richHideTimer = nil
         stopWaveAnimation()
         removeKeyMonitor()
         panel.orderOut(nil)
@@ -418,6 +520,31 @@ final class TerminalPanel {
     private func hideAllButtons() {
         buttonBar.isHidden = true
         fallbackStack.isHidden = true
+        richScrollView.isHidden = true
+        richCopyButton.isHidden = true
+        richCloseButton.isHidden = true
+        richActionBar.isHidden = true
+        richHideTimer?.invalidate()
+        richHideTimer = nil
+    }
+
+    private func startRichHideTimer() {
+        richHideTimer?.invalidate()
+        richHideTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
+            self?.hide()
+        }
+    }
+
+    private func estimatedBodyHeight(_ body: String) -> CGFloat {
+        let font = NSFont.systemFont(ofSize: 12)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font]
+        let maxWidth: CGFloat = 340 - 28
+        let boundingRect = (body as NSString).boundingRect(
+            with: NSSize(width: maxWidth, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: attrs
+        )
+        return min(200, max(40, ceil(boundingRect.height)))
     }
 
     // MARK: - Width calculation
@@ -458,6 +585,9 @@ final class TerminalPanel {
         case .runCommand: name = "terminal"
         case .systemControl: name = "gearshape"
         case .webSearch: name = "magnifyingglass"
+        case .weather: name = "cloud.sun"
+        case .queryContact: name = "person.crop.circle"
+        case .addReminder: name = "bell.badge"
         case .unrecognized: name = "questionmark.circle"
         }
         return NSImage(systemSymbolName: name, accessibilityDescription: nil)
@@ -548,6 +678,18 @@ final class TerminalPanel {
     }
 
     // MARK: - Actions
+
+    @objc private func richCloseAction() {
+        hide()
+    }
+
+    @objc private func richCopyAction() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(richBody, forType: .string)
+        richHideTimer?.invalidate()
+        startRichHideTimer()
+    }
 
     @objc private func confirmAction() {
         guard let intent = pendingIntent else { return }

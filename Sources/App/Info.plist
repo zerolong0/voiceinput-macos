@@ -36,5 +36,9 @@
     <string>VoiceInput 语音终端需要访问日历以创建事件。</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>VoiceInput 语音终端需要使用 AppleScript 自动化来创建笔记和打开应用。</string>
+    <key>NSContactsUsageDescription</key>
+    <string>VoiceInput 语音终端需要访问联系人以查询联系人信息。</string>
+    <key>NSRemindersUsageDescription</key>
+    <string>VoiceInput 语音终端需要访问提醒事项以创建提醒。</string>
 </dict>
 </plist>

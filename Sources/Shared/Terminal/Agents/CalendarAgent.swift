@@ -1,15 +1,12 @@
 import Foundation
 import EventKit
 
-struct CommandResult {
-    let success: Bool
-    let message: String
-}
+final class CalendarAgent: VoiceAgentPlugin {
+    var intentTypes: [IntentType] { [.addCalendar] }
 
-final class CalendarAgent {
     private let store = EKEventStore()
 
-    func execute(intent: RecognizedIntent) async -> CommandResult {
+    func execute(intent: RecognizedIntent) async -> AgentResponse {
         let granted: Bool
         if #available(macOS 14.0, *) {
             granted = (try? await store.requestFullAccessToEvents()) ?? false
@@ -22,7 +19,7 @@ final class CalendarAgent {
         }
 
         guard granted else {
-            return CommandResult(success: false, message: "未授权日历访问。请在 系统设置 > 隐私与安全性 > 日历 中允许 VoiceInput。")
+            return .simple("未授权日历访问。请在 系统设置 > 隐私与安全性 > 日历 中允许 VoiceInput。", success: false)
         }
 
         let event = EKEvent(eventStore: store)
@@ -38,9 +35,9 @@ final class CalendarAgent {
             let formatter = DateFormatter()
             formatter.dateFormat = "MM月dd日 HH:mm"
             let dateStr = formatter.string(from: startDate)
-            return CommandResult(success: true, message: "已添加日历事件「\(intent.title)」于 \(dateStr)")
+            return .simple("已添加日历事件「\(intent.title)」于 \(dateStr)")
         } catch {
-            return CommandResult(success: false, message: "日历创建失败: \(error.localizedDescription)")
+            return .simple("日历创建失败: \(error.localizedDescription)", success: false)
         }
     }
 
@@ -48,7 +45,6 @@ final class CalendarAgent {
         let now = Date()
         let calendar = Calendar.current
 
-        // Try NSDataDetector first
         if let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue) {
             let range = NSRange(detail.startIndex..<detail.endIndex, in: detail)
             let matches = detector.matches(in: detail, range: range)
@@ -58,7 +54,6 @@ final class CalendarAgent {
             }
         }
 
-        // Simple Chinese date mapping
         var targetDate = now
         let lowered = detail.lowercased()
 
@@ -70,7 +65,6 @@ final class CalendarAgent {
             targetDate = calendar.date(byAdding: .weekOfYear, value: 1, to: now) ?? now
         }
 
-        // Extract time
         var hour = 9
         var minute = 0
 

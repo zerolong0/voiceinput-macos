@@ -1,7 +1,6 @@
 import SwiftUI
 
 enum WorkspaceSection: String, CaseIterable, Identifiable {
-    case home = "首页"
     case realtime = "实时输入"
     case history = "历史记录"
     case settings = "设置"
@@ -10,7 +9,6 @@ enum WorkspaceSection: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
-        case .home: return "house"
         case .realtime: return "waveform"
         case .history: return "clock.arrow.circlepath"
         case .settings: return "gearshape"
@@ -67,8 +65,6 @@ struct MainWorkspaceView: View {
     @ViewBuilder
     private var content: some View {
         switch selection {
-        case .home:
-            HomePanelView()
         case .realtime:
             RealtimePanelView()
         case .history:
@@ -79,46 +75,6 @@ struct MainWorkspaceView: View {
     }
 }
 
-struct HomePanelView: View {
-    @ObservedObject private var session = RealtimeSessionStore.shared
-    @State private var itemCount = 0
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("首页")
-                .font(.largeTitle)
-                .fontWeight(.semibold)
-
-            HStack(spacing: 12) {
-                HomeStatCard(title: "当前状态", value: session.stageText)
-                HomeStatCard(title: "历史记录", value: "\(itemCount)")
-                HomeStatCard(title: "热键状态", value: SharedSettings.defaults.string(forKey: SharedSettings.Keys.hotkeyRuntimeStatus) ?? "未知")
-            }
-
-            HStack(spacing: 10) {
-                Button("开始/停止说话输入") {
-                    AppHotkeyVoiceService.shared.toggleFromUI()
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button("复制最近改写") {
-                    let text = session.rewrittenText
-                    guard !text.isEmpty else { return }
-                    let pb = NSPasteboard.general
-                    pb.clearContents()
-                    pb.setString(text, forType: .string)
-                }
-                .buttonStyle(.bordered)
-            }
-
-            Spacer()
-        }
-        .padding(24)
-        .onAppear {
-            itemCount = InputHistoryStore.shared.all().count
-        }
-    }
-}
 
 struct HomeStatCard: View {
     let title: String
@@ -143,6 +99,7 @@ struct HomeStatCard: View {
 
 struct RealtimePanelView: View {
     @ObservedObject private var session = RealtimeSessionStore.shared
+    @State private var itemCount = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -157,6 +114,12 @@ struct RealtimePanelView: View {
                     .padding(.vertical, 6)
                     .background(Color.accentColor.opacity(0.15))
                     .cornerRadius(999)
+            }
+
+            HStack(spacing: 12) {
+                HomeStatCard(title: "当前状态", value: session.stageText)
+                HomeStatCard(title: "历史记录", value: "\(itemCount)")
+                HomeStatCard(title: "热键状态", value: SharedSettings.defaults.string(forKey: SharedSettings.Keys.hotkeyRuntimeStatus) ?? "未知")
             }
 
             HStack(spacing: 10) {
@@ -200,6 +163,9 @@ struct RealtimePanelView: View {
             Spacer()
         }
         .padding(24)
+        .onAppear {
+            itemCount = InputHistoryStore.shared.all().count
+        }
     }
 }
 
@@ -350,7 +316,7 @@ struct HistoryPanelView: View {
         retryingId = item.id
         let baseURL = SharedSettings.defaults.string(forKey: SharedSettings.Keys.llmAPIBaseURL) ?? "https://oneapi.gemiaude.com/v1"
         let apiKey = SharedSettings.defaults.string(forKey: SharedSettings.Keys.llmAPIKey) ?? ""
-        let model = SharedSettings.defaults.string(forKey: SharedSettings.Keys.llmModel) ?? "gemini-2.5-flash-lite"
+        let model = SharedSettings.defaults.string(forKey: SharedSettings.Keys.voiceInputModel) ?? "gemini-2.5-flash-lite"
 
         let local = TextProcessor().process(item.originalText)
         Task {

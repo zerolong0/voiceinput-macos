@@ -1,7 +1,8 @@
 import Foundation
 import AppKit
 
-final class AppLauncherAgent {
+final class AppLauncherAgent: VoiceAgentPlugin {
+    var intentTypes: [IntentType] { [.openApp] }
 
     // 常见中文别名 → (英文名, Bundle ID)
     private static let aliasMap: [(aliases: [String], englishName: String, bundleID: String)] = [
@@ -44,49 +45,42 @@ final class AppLauncherAgent {
         (["Obsidian"], "Obsidian", "md.obsidian"),
     ]
 
-    func execute(intent: RecognizedIntent) async -> CommandResult {
+    func execute(intent: RecognizedIntent) async -> AgentResponse {
         let appName = intent.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !appName.isEmpty else {
-            return CommandResult(success: false, message: "未指定应用名称")
+            return .simple("未指定应用名称", success: false)
         }
 
-        // 1. 查别名映射表
         if let match = Self.resolveAlias(appName) {
             if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: match.bundleID) {
                 return await openApp(at: url, name: match.englishName)
             }
-            // Bundle ID 没找到，用英文名搜路径
             if let url = Self.findAppByName(match.englishName) {
                 return await openApp(at: url, name: match.englishName)
             }
         }
 
-        // 2. 直接当 Bundle ID 试
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: appName) {
             return await openApp(at: url, name: appName)
         }
 
-        // 3. 按名称搜索 /Applications 和 /System/Applications
         if let url = Self.findAppByName(appName) {
             return await openApp(at: url, name: appName)
         }
 
-        // 4. 用 mdfind 搜索（Spotlight）
         if let url = await Self.findAppViaSpotlight(appName) {
             return await openApp(at: url, name: appName)
         }
 
-        return CommandResult(success: false, message: "找不到应用「\(appName)」")
+        return .simple("找不到应用「\(appName)」", success: false)
     }
 
     private static func resolveAlias(_ name: String) -> (englishName: String, bundleID: String)? {
         let lowered = name.lowercased()
         for entry in aliasMap {
-            // 精确匹配英文名
             if entry.englishName.lowercased() == lowered {
                 return (entry.englishName, entry.bundleID)
             }
-            // 匹配中文别名
             for alias in entry.aliases {
                 if alias.lowercased() == lowered || lowered.contains(alias.lowercased()) || alias.lowercased().contains(lowered) {
                     return (entry.englishName, entry.bundleID)
@@ -105,7 +99,6 @@ final class AppLauncherAgent {
             "/System/Library/CoreServices"
         ]
 
-        // 直接路径匹配
         for dir in searchDirs {
             let path = "\(dir)/\(name).app"
             if FileManager.default.fileExists(atPath: path) {
@@ -113,7 +106,6 @@ final class AppLauncherAgent {
             }
         }
 
-        // 遍历目录查找本地化名匹配
         let fm = FileManager.default
         for dir in searchDirs {
             guard let items = try? fm.contentsOfDirectory(atPath: dir) else { continue }
@@ -156,13 +148,13 @@ final class AppLauncherAgent {
         return nil
     }
 
-    private func openApp(at url: URL, name: String) async -> CommandResult {
+    private func openApp(at url: URL, name: String) async -> AgentResponse {
         do {
             let config = NSWorkspace.OpenConfiguration()
             try await NSWorkspace.shared.openApplication(at: url, configuration: config)
-            return CommandResult(success: true, message: "已打开「\(name)」")
+            return .simple("已打开「\(name)」")
         } catch {
-            return CommandResult(success: false, message: "打开失败: \(error.localizedDescription)")
+            return .simple("打开失败: \(error.localizedDescription)", success: false)
         }
     }
 }

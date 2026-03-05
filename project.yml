@@ -57,6 +57,8 @@ targets:
           - "EventKit"
           - "-framework"
           - "CoreAudio"
+          - "-framework"
+          - "Contacts"
 
   # 输入法 - 语音输入
   VoiceInputIM:

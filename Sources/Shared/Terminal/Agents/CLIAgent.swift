@@ -1,6 +1,8 @@
 import Foundation
 
-final class CLIAgent {
+final class CLIAgent: VoiceAgentPlugin {
+    var intentTypes: [IntentType] { [.runCommand] }
+
     private static let dangerousPatterns: [String] = [
         "rm -rf /", "rm -rf ~", "rm -rf /*",
         "sudo rm", "mkfs", "dd if=",
@@ -9,16 +11,16 @@ final class CLIAgent {
         "> /dev/sda", "mv /* /dev/null"
     ]
 
-    func execute(intent: RecognizedIntent) async -> CommandResult {
+    func execute(intent: RecognizedIntent) async -> AgentResponse {
         let command = intent.detail.isEmpty ? intent.title : intent.detail
         let trimmed = command.trimmingCharacters(in: .whitespacesAndNewlines)
 
         guard !trimmed.isEmpty else {
-            return CommandResult(success: false, message: "未指定命令")
+            return .simple("未指定命令", success: false)
         }
 
         if isDangerous(trimmed) {
-            return CommandResult(success: false, message: "该命令被安全策略拒绝: \(truncate(trimmed, maxLength: 60))")
+            return .simple("该命令被安全策略拒绝: \(truncate(trimmed, maxLength: 60))", success: false)
         }
 
         let process = Process()
@@ -41,14 +43,19 @@ final class CLIAgent {
             let errStr = String(data: errData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
             if process.terminationStatus == 0 {
-                let output = outStr.isEmpty ? "(无输出)" : truncate(outStr, maxLength: 200)
-                return CommandResult(success: true, message: output)
+                let output = outStr.isEmpty ? "(无输出)" : outStr
+                let shortOutput = truncate(output, maxLength: 80)
+                // Use rich content if output is long
+                if output.count > 80 {
+                    return AgentResponse(success: true, title: "命令执行成功", body: output, actions: [], contentType: .text)
+                }
+                return .simple(shortOutput)
             } else {
                 let output = errStr.isEmpty ? outStr : errStr
-                return CommandResult(success: false, message: "退出码 \(process.terminationStatus): \(truncate(output, maxLength: 200))")
+                return .simple("退出码 \(process.terminationStatus): \(truncate(output, maxLength: 200))", success: false)
             }
         } catch {
-            return CommandResult(success: false, message: "命令执行失败: \(error.localizedDescription)")
+            return .simple("命令执行失败: \(error.localizedDescription)", success: false)
         }
     }
 

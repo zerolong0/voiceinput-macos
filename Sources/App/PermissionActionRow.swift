@@ -36,30 +36,44 @@ struct StyleButton: View {
     let icon: String
     let desc: String
     let isSelected: Bool
+    var editAction: (() -> Void)? = nil
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundStyle(isSelected ? Color.white : Color.accentColor)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(name).font(.subheadline.weight(.medium))
-                    Text(desc).font(.caption).foregroundStyle(isSelected ? Color.white.opacity(0.8) : .secondary)
+        ZStack(alignment: .topTrailing) {
+            Button(action: action) {
+                HStack(spacing: 12) {
+                    Image(systemName: icon)
+                        .font(.title3)
+                        .foregroundStyle(isSelected ? Color.white : Color.accentColor)
+                        .frame(width: 28)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(name).font(.subheadline.weight(.medium))
+                        Text(desc).font(.caption).foregroundStyle(isSelected ? Color.white.opacity(0.8) : .secondary)
+                    }
+                    Spacer()
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .foregroundStyle(isSelected ? Color.white : Color.secondary)
+                        .font(.system(size: 16))
                 }
-                Spacer()
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? Color.white : Color.secondary)
-                    .font(.system(size: 16))
+                .padding(12)
+                .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.08))
+                .cornerRadius(8)
+                .contentShape(Rectangle())
             }
-            .padding(12)
-            .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.08))
-            .cornerRadius(8)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
+
+            if let editAction = editAction {
+                Button(action: editAction) {
+                    Image(systemName: "square.and.pencil")
+                        .font(.caption)
+                        .foregroundStyle(isSelected ? Color.white.opacity(0.8) : Color.accentColor.opacity(0.7))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.plain)
+            }
         }
-        .buttonStyle(.plain)
-        .frame(maxWidth: .infinity)
     }
 }

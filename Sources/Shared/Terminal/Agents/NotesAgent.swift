@@ -1,7 +1,9 @@
 import Foundation
 
-final class NotesAgent {
-    func execute(intent: RecognizedIntent) async -> CommandResult {
+final class NotesAgent: VoiceAgentPlugin {
+    var intentTypes: [IntentType] { [.createNote] }
+
+    func execute(intent: RecognizedIntent) async -> AgentResponse {
         let title = sanitizeForAppleScript(intent.title)
         let body = sanitizeForAppleScript(intent.detail)
 
@@ -24,7 +26,7 @@ final class NotesAgent {
 
         return await MainActor.run {
             guard let script = NSAppleScript(source: scriptSource) else {
-                return CommandResult(success: false, message: "AppleScript 创建失败")
+                return AgentResponse.simple("AppleScript 创建失败", success: false)
             }
 
             var error: NSDictionary?
@@ -32,10 +34,10 @@ final class NotesAgent {
 
             if let error = error {
                 let msg = error[NSAppleScript.errorMessage] as? String ?? "未知错误"
-                return CommandResult(success: false, message: "笔记创建失败: \(msg)")
+                return AgentResponse.simple("笔记创建失败: \(msg)", success: false)
             }
 
-            return CommandResult(success: true, message: "已创建笔记「\(intent.title)」")
+            return AgentResponse.simple("已创建笔记「\(intent.title)」")
         }
     }
 

@@ -187,9 +187,10 @@ final class PolishClient {
     }
 
     private func systemPrompt(for style: String) -> String {
-        let custom = SharedSettings.defaults.string(forKey: SharedSettings.Keys.customRewritePrompt) ?? ""
-        if !custom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return custom
+        let perStyleKey = SharedSettings.customRewritePromptKey(for: style)
+        let perStyleCustom = SharedSettings.defaults.string(forKey: perStyleKey) ?? ""
+        if !perStyleCustom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return perStyleCustom
         }
         return Self.defaultSystemPrompt(for: style)
     }

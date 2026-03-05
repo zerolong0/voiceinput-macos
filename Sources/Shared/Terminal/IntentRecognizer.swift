@@ -14,14 +14,20 @@ enum IntentType: String, Codable {
     case runCommand
     case systemControl
     case webSearch
+    case weather
+    case queryContact
+    case addReminder
     case unrecognized
 
     var riskLevel: RiskLevel {
         switch self {
         case .openApp:        return .safe
         case .webSearch:      return .safe
+        case .weather:        return .safe
+        case .queryContact:   return .safe
         case .createNote:     return .low
         case .addCalendar:    return .low
+        case .addReminder:    return .low
         case .systemControl:  return .medium
         case .runCommand:     return .dangerous
         case .unrecognized:   return .medium
@@ -91,7 +97,7 @@ final class IntentRecognizer {
         let defaults = SharedSettings.defaults
         let baseURL = defaults.string(forKey: SharedSettings.Keys.llmAPIBaseURL) ?? "https://oneapi.gemiaude.com/v1"
         let apiKey = defaults.string(forKey: SharedSettings.Keys.llmAPIKey) ?? ""
-        let model = defaults.string(forKey: SharedSettings.Keys.llmModel) ?? "gemini-2.5-flash-lite"
+        let model = defaults.string(forKey: SharedSettings.Keys.agentModel) ?? "gemini-2.5-flash"
 
         guard apiKey.count >= 10 else {
             return unrecognized(trimmed)
@@ -196,6 +202,12 @@ final class IntentRecognizer {
             summary = "系统控制: \(parsed.title)"
         case .webSearch:
             summary = "搜索: \(parsed.title)"
+        case .weather:
+            summary = "天气: \(parsed.title)"
+        case .queryContact:
+            summary = "联系人: \(parsed.title)"
+        case .addReminder:
+            summary = "提醒: \(parsed.title)"
         case .unrecognized:
             summary = originalText
         }
@@ -230,6 +242,9 @@ final class IntentRecognizer {
         4. runCommand - 执行终端命令（如"执行ls"、"运行 brew update"）
         5. systemControl - 系统控制（如"音量调到50"、"静音"、"深色模式"、"锁屏"、"截图"、"关WiFi"）
         6. webSearch - 搜索网页（如"搜索天气预报"、"百度量子计算"、"Google Swift并发"）
+        7. weather - 天气查询（如"今天天气怎么样"、"北京明天温度"、"上海天气"）
+        8. queryContact - 查询联系人（如"张三的手机号"、"老婆的邮箱"、"妈妈的电话"）
+        9. addReminder - 添加提醒事项（如"提醒我明天9点开会"、"三天后提醒我还书"、"下午3点提醒我喝水"）
 
         输出格式（只输出JSON，不要其他内容）：
         {"type":"addCalendar","title":"会议","detail":"明天下午3点","confidence":0.95}
@@ -278,6 +293,17 @@ final class IntentRecognizer {
         【webSearch 规则】：
         title 填搜索摘要，detail 填完整搜索词。
         用户指定引擎（"百度"/"Google"）时保留在 detail 中。
+
+        【weather 规则】：
+        title 填"查询天气"，detail 填城市名（英文或拼音优先，如 "beijing"、"Shanghai"、"guangzhou"）。
+        若用户未指定城市，detail 填 "auto"。
+
+        【queryContact 规则】：
+        title 填联系人姓名，detail 也填联系人姓名。
+        如"老婆"、"妈妈"等关系词直接填入 detail。
+
+        【addReminder 规则】：
+        title 填包含时间的提醒摘要（如"明天9点开会"），detail 填提醒正文内容（不含时间，如"开会"）。
 
         如果无法识别意图，输出：
         {"type":"unrecognized","title":"","detail":"","confidence":0.0}

@@ -65,6 +65,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func showWorkspaceWindow() {
+        window?.close()
         let rootView = MainWorkspaceView()
 
         window = NSWindow(
@@ -101,8 +102,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func hasMissingPermissions() -> Bool {
         let micOK = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
         let speechOK = SFSpeechRecognizer.authorizationStatus() == .authorized
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false] as CFDictionary
-        let axOK = AXIsProcessTrustedWithOptions(options)
+        let axOK = AXIsProcessTrusted()
         return !(micOK && speechOK && axOK)
     }
 

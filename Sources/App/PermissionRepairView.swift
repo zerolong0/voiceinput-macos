@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 import Speech
+import ApplicationServices
 
 struct PermissionRepairView: View {
     let onContinue: () -> Void
@@ -9,6 +10,7 @@ struct PermissionRepairView: View {
     @State private var micGranted = false
     @State private var speechGranted = false
     @State private var accessibilityGranted = false
+    @State private var axSentToSettings = false  // user went to System Settings for AX
     @State private var pollTimer: Timer?
 
     private var allGranted: Bool {
@@ -49,8 +51,31 @@ struct PermissionRepairView: View {
                 }
 
                 if !accessibilityGranted {
-                    PermissionActionRow(icon: "hand.tap", title: "辅助功能", desc: "自动注入文本", granted: accessibilityGranted, buttonTitle: "去系统设置") {
-                        requestAccessibility()
+                    if axSentToSettings {
+                        // User came back from System Settings — AX needs restart to take effect
+                        HStack(spacing: 10) {
+                            Image(systemName: "hand.tap")
+                                .foregroundStyle(.blue)
+                                .frame(width: 20)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("辅助功能").font(.subheadline.weight(.semibold))
+                                Text("授权后需重启应用才能生效").font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            VStack(alignment: .trailing, spacing: 6) {
+                                Button("立即重启") { restartApp() }
+                                    .buttonStyle(.borderedProminent)
+                                    .controlSize(.small)
+                                Button("尚未授权") { axSentToSettings = false }
+                                    .buttonStyle(.borderless)
+                                    .controlSize(.small)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    } else {
+                        PermissionActionRow(icon: "hand.tap", title: "辅助功能", desc: "自动注入文本", granted: false, buttonTitle: "去系统设置") {
+                            requestAccessibility()
+                        }
                     }
                 }
 
@@ -136,11 +161,16 @@ struct PermissionRepairView: View {
     }
 
     private func requestAccessibility() {
-        _ = AccessibilityTrust.isTrusted(prompt: true)
-        if !AccessibilityTrust.isTrusted(prompt: false) {
-            let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
-            NSWorkspace.shared.open(url)
-        }
+        axSentToSettings = true
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+        NSWorkspace.shared.open(url)
+    }
+
+    private func restartApp() {
+        let appURL = Bundle.main.bundleURL
+        let config = NSWorkspace.OpenConfiguration()
+        NSWorkspace.shared.openApplication(at: appURL, configuration: config) { _, _ in }
+        NSApp.terminate(nil)
     }
 
     private func openPrivacySettings(_ anchor: String) {
@@ -151,7 +181,7 @@ struct PermissionRepairView: View {
     private func syncPermissions() {
         micGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
         speechGranted = SFSpeechRecognizer.authorizationStatus() == .authorized
-        accessibilityGranted = AccessibilityTrust.isTrusted(prompt: false)
+        accessibilityGranted = AXIsProcessTrusted()
     }
 
     private func startPolling() {

@@ -23,24 +23,26 @@ enum SearchEngine {
     }
 }
 
-final class WebSearchAgent {
-    func execute(intent: RecognizedIntent) async -> CommandResult {
+final class WebSearchAgent: VoiceAgentPlugin {
+    var intentTypes: [IntentType] { [.webSearch] }
+
+    func execute(intent: RecognizedIntent) async -> AgentResponse {
         let query = intent.detail.isEmpty ? intent.title : intent.detail
         let engine = detectEngine(query)
         let cleanQuery = stripEnginePrefix(query)
 
         guard !cleanQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return CommandResult(success: false, message: "搜索词为空")
+            return .simple("搜索词为空", success: false)
         }
 
         guard let encoded = cleanQuery.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let url = URL(string: engine.baseURL + encoded) else {
-            return CommandResult(success: false, message: "无法构建搜索 URL")
+            return .simple("无法构建搜索 URL", success: false)
         }
 
         NSWorkspace.shared.open(url)
         let truncated = truncate(cleanQuery, maxLength: 30)
-        return CommandResult(success: true, message: "正在搜索「\(truncated)」")
+        return .simple("正在搜索「\(truncated)」")
     }
 
     private func detectEngine(_ query: String) -> SearchEngine {

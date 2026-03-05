@@ -243,13 +243,17 @@ final class VoiceTerminalService: NSObject {
         terminalPanel.setState(.executing(intent))
 
         Task {
-            let result = await commandRouter.execute(intent)
+            let response = await commandRouter.execute(intent: intent)
 
             await MainActor.run {
-                if result.success {
-                    terminalPanel.setState(.success(result.message))
+                if response.success {
+                    if !response.body.isEmpty {
+                        terminalPanel.setState(.richContent(response))
+                    } else {
+                        terminalPanel.setState(.success(response.title))
+                    }
                 } else {
-                    terminalPanel.setState(.error(result.message))
+                    terminalPanel.setState(.error(response.title))
                 }
                 isActive = false
             }

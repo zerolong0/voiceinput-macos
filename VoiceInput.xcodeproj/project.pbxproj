@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		01A3D9C2A772813ECF06EE9F /* SystemControlAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4320349AB7F2212828602BE /* SystemControlAgent.swift */; };
 		0C598D64EA4EB8F951456260 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE4BA2116CF5E37551354478 /* OnboardingView.swift */; };
+		0D32411C2CC0D9094664613A /* RemindersAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F7B89437EB5B5120358677B /* RemindersAgent.swift */; };
 		1058A88F5BFDC34D0D458D6A /* AppBehaviorController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CEB8B2848CF7C138C6F2D17 /* AppBehaviorController.swift */; };
 		127520D752FC3D87E9483CA4 /* WebSearchAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED8F666A61EFA175468F4557 /* WebSearchAgent.swift */; };
 		1B250ECB398DEB63323BFECE /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3ABE737D1806CF8774EA7949 /* main.swift */; };
@@ -24,6 +25,7 @@
 		399812D4CCA22002CBB760A0 /* NotesAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 300736F5B0F65C334276E135 /* NotesAgent.swift */; };
 		3D43D3F5BF91359B28BABBF4 /* HotkeyConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85E18AB78FC76883179B7F8D /* HotkeyConfig.swift */; };
 		3E04ACA24654B125CCDD86FF /* VADetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8773015F95DC657A882B4FA /* VADetector.swift */; };
+		3F959CDC30DBEE3324C66EDD /* RemindersAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F7B89437EB5B5120358677B /* RemindersAgent.swift */; };
 		45FA903F8857BFE08BED68E7 /* PermissionDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BE55A6889A54A4FA27ABE4E /* PermissionDiagnostics.swift */; };
 		465D6652D1C42FBB475F4220 /* TerminalPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17061A38F79122B41455B1F2 /* TerminalPanel.swift */; };
 		483F9CC58F587F3BC6E459F7 /* VADetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8773015F95DC657A882B4FA /* VADetector.swift */; };
@@ -45,6 +47,7 @@
 		70FD5FE7B4A83B080DF986A0 /* icon_16x16@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 88B665DF398CE0C2776F99C9 /* icon_16x16@2x.png */; };
 		7451B30EBFAF81CFFCB7D6F8 /* PermissionActionRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9B92CEB50FA3EA5D786FAA6 /* PermissionActionRow.swift */; };
 		784B8D6A93144727B3E3F58B /* AccessibilityTrust.swift in Sources */ = {isa = PBXBuildFile; fileRef = 826CAD1B4F4C76C22E121556 /* AccessibilityTrust.swift */; };
+		7A301153D32E8C21F975870D /* ContactsAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 838D976E55EA41E48A88DBB0 /* ContactsAgent.swift */; };
 		7C741C1B636E137A1496D562 /* PermissionDiagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BE55A6889A54A4FA27ABE4E /* PermissionDiagnostics.swift */; };
 		80C2A4B98D37CF951D47B780 /* SceneDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F4FF67D55A028ADEB51A228 /* SceneDetector.swift */; };
 		81AAAFF44D1A8AD2EAFDFE7E /* icon_512x512@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 47CB2F0153D59DCDEE0D1881 /* icon_512x512@2x.png */; };
@@ -52,6 +55,7 @@
 		85754FA41979A3339AD3513F /* AppLauncherAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA478AB9015E90149B6ECE6E /* AppLauncherAgent.swift */; };
 		862BD43EACBC5D9B384B9640 /* StreamingWhisperRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FD63920BC935B97E8E97145 /* StreamingWhisperRecognizer.swift */; };
 		8D6068A62081C2E2192B69D8 /* CalendarAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B28E697AFE1FC243F538B1B1 /* CalendarAgent.swift */; };
+		8DCA7C7676588C7AD391B2D7 /* VoiceAgentPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8EE4CC838A6B56B4DB8727D /* VoiceAgentPlugin.swift */; };
 		8E91AC6E266AD4DBCBFFA8ED /* AppHotkeyVoiceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A5DEA2ED2DFEA94EE4E3EE /* AppHotkeyVoiceService.swift */; };
 		8ECE5D1A06CAC9951E6C2133 /* MainWorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A993ECAE806E8A3F62C0B219 /* MainWorkspaceView.swift */; };
 		93EC38FBDC93C6A823B1E33C /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = EF0396A975D2D9A92D700312 /* README.md */; };
@@ -62,6 +66,8 @@
 		9FEE6BC571BCC0D2C947277F /* AppBehaviorController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CEB8B2848CF7C138C6F2D17 /* AppBehaviorController.swift */; };
 		A2826423E94EA958F8DDB2EA /* PermissionRepairView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0681195D48C6054C9E9C6F3 /* PermissionRepairView.swift */; };
 		A361AB6FB7CFD84C1F61BF92 /* AudioCaptureManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F251FB736F4F0670D453259 /* AudioCaptureManager.swift */; };
+		A774DC95F1DA94D15A4BFE6E /* VoiceAgentPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8EE4CC838A6B56B4DB8727D /* VoiceAgentPlugin.swift */; };
+		AA73E8F223C0AB258C55EA43 /* WeatherAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5C34FE0ABF669C218C3E71 /* WeatherAgent.swift */; };
 		ACD7A566E1D7A48665B82847 /* CommandRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10AB8EE4BEEE0A1DD5A1D9F5 /* CommandRouter.swift */; };
 		B176C7D1E924504150F49F68 /* UserDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE679BCD8B85CC6ED50F8F83 /* UserDictionary.swift */; };
 		B1D5D0D61C0B2E1EABBBADF0 /* CalendarAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = B28E697AFE1FC243F538B1B1 /* CalendarAgent.swift */; };
@@ -74,6 +80,7 @@
 		CBFD758E1676ADC73769CE6D /* WebSearchAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED8F666A61EFA175468F4557 /* WebSearchAgent.swift */; };
 		CC64119DB2BF22E08323A01E /* HotkeyConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85E18AB78FC76883179B7F8D /* HotkeyConfig.swift */; };
 		CFA407B35CF133B480EE47E4 /* SceneDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F4FF67D55A028ADEB51A228 /* SceneDetector.swift */; };
+		D22AFB5CDF7DAD30411CE1BD /* WeatherAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A5C34FE0ABF669C218C3E71 /* WeatherAgent.swift */; };
 		D3216B58BCABC35311473936 /* AppIcon.svg in Resources */ = {isa = PBXBuildFile; fileRef = 7D9B7AA9031D4858297CB7F0 /* AppIcon.svg */; };
 		D484D42CFE5BB11DEBDA47D7 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4780BDC5B3DBD6418DF7374B /* AppDelegate.swift */; };
 		D77007AF95F0738CFBE11C1F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F38DB9A79184B1CE226D4A25 /* Assets.xcassets */; };
@@ -88,6 +95,7 @@
 		EEC217E70E6BE15D10EC5C42 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33ADE79D6A80BFA06ACCF4CD /* main.swift */; };
 		F1A74B0BA874A62B01829D57 /* SystemControlAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4320349AB7F2212828602BE /* SystemControlAgent.swift */; };
 		F5A7FA4F67803680C58D1393 /* TextProcessor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 441D51A6F1D46FF2AD49590E /* TextProcessor.swift */; };
+		F6D9406535C3294D50D1709B /* ContactsAgent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 838D976E55EA41E48A88DBB0 /* ContactsAgent.swift */; };
 		F6DB09EB697B8366E843AB69 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = EF0396A975D2D9A92D700312 /* README.md */; };
 		F71A332DA80628691D95716D /* WhisperEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C978F448B2598D04CA81053A /* WhisperEngine.swift */; };
 		F88BF9C28EE46F1A96FA2B83 /* SharedSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78F609194CD98B47CD421234 /* SharedSettings.swift */; };
@@ -111,6 +119,7 @@
 		4780BDC5B3DBD6418DF7374B /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		47CB2F0153D59DCDEE0D1881 /* icon_512x512@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon_512x512@2x.png"; sourceTree = "<group>"; };
 		498B0B4967FA1139632B7BA1 /* WhisperBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = WhisperBridge.h; sourceTree = "<group>"; };
+		4F7B89437EB5B5120358677B /* RemindersAgent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemindersAgent.swift; sourceTree = "<group>"; };
 		4F80B63E93C4D2A185819744 /* VoiceInputController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceInputController.swift; sourceTree = "<group>"; };
 		4FD63920BC935B97E8E97145 /* StreamingWhisperRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingWhisperRecognizer.swift; sourceTree = "<group>"; };
 		5DC8CD332A60C32D23232683 /* AudioFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioFormat.swift; sourceTree = "<group>"; };
@@ -123,9 +132,11 @@
 		73B0CEE8AE7BC8240CE99E47 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		7755529D3182767EBA8DD6F9 /* RealtimeSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealtimeSessionStore.swift; sourceTree = "<group>"; };
 		78F609194CD98B47CD421234 /* SharedSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedSettings.swift; sourceTree = "<group>"; };
+		7A5C34FE0ABF669C218C3E71 /* WeatherAgent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherAgent.swift; sourceTree = "<group>"; };
 		7CBD5D5BD7070C024C9C7596 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
 		7D9B7AA9031D4858297CB7F0 /* AppIcon.svg */ = {isa = PBXFileReference; path = AppIcon.svg; sourceTree = "<group>"; };
 		826CAD1B4F4C76C22E121556 /* AccessibilityTrust.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityTrust.swift; sourceTree = "<group>"; };
+		838D976E55EA41E48A88DBB0 /* ContactsAgent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsAgent.swift; sourceTree = "<group>"; };
 		85E18AB78FC76883179B7F8D /* HotkeyConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotkeyConfig.swift; sourceTree = "<group>"; };
 		88B665DF398CE0C2776F99C9 /* icon_16x16@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon_16x16@2x.png"; sourceTree = "<group>"; };
 		8F251FB736F4F0670D453259 /* AudioCaptureManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCaptureManager.swift; sourceTree = "<group>"; };
@@ -137,6 +148,7 @@
 		A2BD0AA6AE7887E5F3134174 /* VoiceInputIM.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VoiceInputIM.entitlements; sourceTree = "<group>"; };
 		A2E3F4F7B72D71C69F26E15B /* icon_256x256@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "icon_256x256@2x.png"; sourceTree = "<group>"; };
 		A32BB963BE2685D5364B725F /* VoiceInput.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoiceInput.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A8EE4CC838A6B56B4DB8727D /* VoiceAgentPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceAgentPlugin.swift; sourceTree = "<group>"; };
 		A993ECAE806E8A3F62C0B219 /* MainWorkspaceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainWorkspaceView.swift; sourceTree = "<group>"; };
 		A9B92CEB50FA3EA5D786FAA6 /* PermissionActionRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionActionRow.swift; sourceTree = "<group>"; };
 		B0681195D48C6054C9E9C6F3 /* PermissionRepairView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionRepairView.swift; sourceTree = "<group>"; };
@@ -186,8 +198,11 @@
 				FA478AB9015E90149B6ECE6E /* AppLauncherAgent.swift */,
 				B28E697AFE1FC243F538B1B1 /* CalendarAgent.swift */,
 				BB6C80C1FF04B73F38DED098 /* CLIAgent.swift */,
+				838D976E55EA41E48A88DBB0 /* ContactsAgent.swift */,
 				300736F5B0F65C334276E135 /* NotesAgent.swift */,
+				4F7B89437EB5B5120358677B /* RemindersAgent.swift */,
 				C4320349AB7F2212828602BE /* SystemControlAgent.swift */,
+				7A5C34FE0ABF669C218C3E71 /* WeatherAgent.swift */,
 				ED8F666A61EFA175468F4557 /* WebSearchAgent.swift */,
 			);
 			path = Agents;
@@ -321,6 +336,7 @@
 			children = (
 				10AB8EE4BEEE0A1DD5A1D9F5 /* CommandRouter.swift */,
 				686FDBF4B208FA856BE83120 /* IntentRecognizer.swift */,
+				A8EE4CC838A6B56B4DB8727D /* VoiceAgentPlugin.swift */,
 				0EF76F597275772AF9BE3EFC /* Agents */,
 			);
 			path = Terminal;
@@ -492,6 +508,7 @@
 				279692E2ECD79B414B28E183 /* CLIAgent.swift in Sources */,
 				8D6068A62081C2E2192B69D8 /* CalendarAgent.swift in Sources */,
 				CBF7ABDDE7F9A5AE454A4FFA /* CommandRouter.swift in Sources */,
+				F6D9406535C3294D50D1709B /* ContactsAgent.swift in Sources */,
 				3D43D3F5BF91359B28BABBF4 /* HotkeyConfig.swift in Sources */,
 				5AF6D82341A88896A39285D7 /* InputHistoryStore.swift in Sources */,
 				58919CFC3380850752422173 /* InputStatusPanel.swift in Sources */,
@@ -501,6 +518,7 @@
 				45FA903F8857BFE08BED68E7 /* PermissionDiagnostics.swift in Sources */,
 				257768AD4D97BC179932EFA9 /* PolishClient.swift in Sources */,
 				502F48E747355F8FF19C8B7B /* RealtimeSessionStore.swift in Sources */,
+				0D32411C2CC0D9094664613A /* RemindersAgent.swift in Sources */,
 				CFA407B35CF133B480EE47E4 /* SceneDetector.swift in Sources */,
 				30DD792487A453C715984F91 /* SharedSettings.swift in Sources */,
 				862BD43EACBC5D9B384B9640 /* StreamingWhisperRecognizer.swift in Sources */,
@@ -509,7 +527,9 @@
 				F5A7FA4F67803680C58D1393 /* TextProcessor.swift in Sources */,
 				B176C7D1E924504150F49F68 /* UserDictionary.swift in Sources */,
 				3E04ACA24654B125CCDD86FF /* VADetector.swift in Sources */,
+				8DCA7C7676588C7AD391B2D7 /* VoiceAgentPlugin.swift in Sources */,
 				261557D041ADDC2A64A8EA65 /* VoiceInputController.swift in Sources */,
+				AA73E8F223C0AB258C55EA43 /* WeatherAgent.swift in Sources */,
 				127520D752FC3D87E9483CA4 /* WebSearchAgent.swift in Sources */,
 				BDB63550BAEE780F57E3C00C /* WhisperEngine.swift in Sources */,
 				EEC217E70E6BE15D10EC5C42 /* main.swift in Sources */,
@@ -533,6 +553,7 @@
 				644B5BD191928F222DC07946 /* CLIAgent.swift in Sources */,
 				B1D5D0D61C0B2E1EABBBADF0 /* CalendarAgent.swift in Sources */,
 				ACD7A566E1D7A48665B82847 /* CommandRouter.swift in Sources */,
+				7A301153D32E8C21F975870D /* ContactsAgent.swift in Sources */,
 				CC64119DB2BF22E08323A01E /* HotkeyConfig.swift in Sources */,
 				9DE7932079487957CD9C75CE /* InputHistoryStore.swift in Sources */,
 				2215682028C2479722DF04ED /* InputStatusPanel.swift in Sources */,
@@ -546,6 +567,7 @@
 				A2826423E94EA958F8DDB2EA /* PermissionRepairView.swift in Sources */,
 				20B17CE5A237C744BB1F933A /* PolishClient.swift in Sources */,
 				C9B15A6E6539EFCB02907A55 /* RealtimeSessionStore.swift in Sources */,
+				3F959CDC30DBEE3324C66EDD /* RemindersAgent.swift in Sources */,
 				80C2A4B98D37CF951D47B780 /* SceneDetector.swift in Sources */,
 				FC3FBBA21E03BA75024AD2A1 /* SettingsView.swift in Sources */,
 				F88BF9C28EE46F1A96FA2B83 /* SharedSettings.swift in Sources */,
@@ -555,7 +577,9 @@
 				EA7E8CE33DCE3752D97D36D0 /* TextProcessor.swift in Sources */,
 				BEACE7AB0F81E7C8ED693371 /* UserDictionary.swift in Sources */,
 				483F9CC58F587F3BC6E459F7 /* VADetector.swift in Sources */,
+				A774DC95F1DA94D15A4BFE6E /* VoiceAgentPlugin.swift in Sources */,
 				FE22E8F874BD857FC6BD98E9 /* VoiceTerminalService.swift in Sources */,
+				D22AFB5CDF7DAD30411CE1BD /* WeatherAgent.swift in Sources */,
 				CBFD758E1676ADC73769CE6D /* WebSearchAgent.swift in Sources */,
 				F71A332DA80628691D95716D /* WhisperEngine.swift in Sources */,
 				1B250ECB398DEB63323BFECE /* main.swift in Sources */,
@@ -597,6 +621,8 @@
 					EventKit,
 					"-framework",
 					CoreAudio,
+					"-framework",
+					Contacts,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.voiceinput.macos;
 				SDKROOT = macosx;
@@ -758,6 +784,8 @@
 					EventKit,
 					"-framework",
 					CoreAudio,
+					"-framework",
+					Contacts,
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.voiceinput.macos;
 				SDKROOT = macosx;

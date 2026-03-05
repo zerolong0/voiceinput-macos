@@ -500,7 +500,7 @@ final class AppHotkeyVoiceService: NSObject {
         let style = effectiveStyle()
         let baseURL = SharedSettings.defaults.string(forKey: SharedSettings.Keys.llmAPIBaseURL) ?? "https://oneapi.gemiaude.com/v1"
         let apiKey = SharedSettings.defaults.string(forKey: SharedSettings.Keys.llmAPIKey) ?? ""
-        let model = SharedSettings.defaults.string(forKey: SharedSettings.Keys.llmModel) ?? "gemini-2.5-flash-lite"
+        let model = SharedSettings.defaults.string(forKey: SharedSettings.Keys.voiceInputModel) ?? "gemini-2.5-flash-lite"
         statusPanel.showThinking(text: localProcessed)
         RealtimeSessionStore.shared.setStage(.rewriting, text: "改写中")
 

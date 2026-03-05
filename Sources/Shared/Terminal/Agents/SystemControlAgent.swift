@@ -20,8 +20,10 @@ enum SystemAction {
     case unknown
 }
 
-final class SystemControlAgent {
-    func execute(intent: RecognizedIntent) async -> CommandResult {
+final class SystemControlAgent: VoiceAgentPlugin {
+    var intentTypes: [IntentType] { [.systemControl] }
+
+    func execute(intent: RecognizedIntent) async -> AgentResponse {
         let action = parseAction(from: intent.detail, title: intent.title)
         return await perform(action)
     }
@@ -29,7 +31,6 @@ final class SystemControlAgent {
     private func parseAction(from detail: String, title: String) -> SystemAction {
         let d = detail.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // Structured detail parsing
         if d.hasPrefix("set_volume:") {
             let numStr = d.replacingOccurrences(of: "set_volume:", with: "")
             if let val = Float(numStr) { return .setVolume(min(100, max(0, val)) / 100.0) }
@@ -51,12 +52,10 @@ final class SystemControlAgent {
         default: break
         }
 
-        // Fallback: Chinese keyword matching from title
         let t = title.lowercased()
         if t.contains("音量") {
             if t.contains("调高") || t.contains("大") { return .volumeUp }
             if t.contains("调低") || t.contains("小") { return .volumeDown }
-            // Try to extract number
             if let range = t.range(of: #"\d+"#, options: .regularExpression) {
                 if let val = Float(t[range]) { return .setVolume(min(100, max(0, val)) / 100.0) }
             }
@@ -80,7 +79,7 @@ final class SystemControlAgent {
         return .unknown
     }
 
-    private func perform(_ action: SystemAction) async -> CommandResult {
+    private func perform(_ action: SystemAction) async -> AgentResponse {
         switch action {
         case .volumeUp:
             let current = getVolumeWithFallback()
@@ -119,7 +118,7 @@ final class SystemControlAgent {
         case .toggleWiFi:
             return await toggleWiFi()
         case .unknown:
-            return CommandResult(success: false, message: "无法识别的系统控制命令")
+            return .simple("无法识别的系统控制命令", success: false)
         }
     }
 
@@ -141,7 +140,6 @@ final class SystemControlAgent {
         let deviceID = getDefaultOutputDeviceID()
         var volume: Float32 = 0
         var size = UInt32(MemoryLayout<Float32>.size)
-        // Try channel 1, 2, then main (0)
         for ch in [UInt32(1), UInt32(2), UInt32(kAudioObjectPropertyElementMain)] {
             var address = AudioObjectPropertyAddress(
                 mSelector: kAudioDevicePropertyVolumeScalar,
@@ -175,17 +173,16 @@ final class SystemControlAgent {
         return didSet
     }
 
-    private func setVolumeWithFallback(_ volume: Float) -> CommandResult {
+    private func setVolumeWithFallback(_ volume: Float) -> AgentResponse {
         let set = setVolume(volume)
         if set {
-            return CommandResult(success: true, message: "音量: \(Int(volume * 100))%")
+            return .simple("音量: \(Int(volume * 100))%")
         }
-        // Fallback: AppleScript
         let pct = Int(volume * 100)
         return runAppleScript(script: "set volume output volume \(pct)", successMsg: "音量: \(pct)%")
     }
 
-    private func setMute(_ mute: Bool) -> CommandResult {
+    private func setMute(_ mute: Bool) -> AgentResponse {
         let deviceID = getDefaultOutputDeviceID()
         var value: UInt32 = mute ? 1 : 0
         var address = AudioObjectPropertyAddress(
@@ -199,11 +196,10 @@ final class SystemControlAgent {
             if isSettable.boolValue {
                 let result = AudioObjectSetPropertyData(deviceID, &address, 0, nil, UInt32(MemoryLayout<UInt32>.size), &value)
                 if result == noErr {
-                    return CommandResult(success: true, message: mute ? "已静音" : "已取消静音")
+                    return .simple(mute ? "已静音" : "已取消静音")
                 }
             }
         }
-        // Fallback: AppleScript
         let script = mute ? "set volume output muted true" : "set volume output muted false"
         return runAppleScript(script: script, successMsg: mute ? "已静音" : "已取消静音")
     }
@@ -211,7 +207,6 @@ final class SystemControlAgent {
     private func getVolumeWithFallback() -> Float {
         let v = getVolume()
         if v > 0 { return v }
-        // Fallback: read via AppleScript
         var error: NSDictionary?
         if let s = NSAppleScript(source: "output volume of (get volume settings)") {
             let r = s.executeAndReturnError(&error)
@@ -219,7 +214,7 @@ final class SystemControlAgent {
                 return val / 100.0
             }
         }
-        return 0.5 // safe default
+        return 0.5
     }
 
     private func screenshotPath() -> String {
@@ -242,8 +237,7 @@ final class SystemControlAgent {
 
     // MARK: - WiFi
 
-    private func toggleWiFi() async -> CommandResult {
-        // Check current state
+    private func toggleWiFi() async -> AgentResponse {
         let checkProcess = Process()
         checkProcess.executableURL = URL(fileURLWithPath: "/usr/sbin/networksetup")
         checkProcess.arguments = ["-getairportpower", "en0"]
@@ -259,34 +253,35 @@ final class SystemControlAgent {
             return runProcess("/usr/sbin/networksetup", args: ["-setairportpower", "en0", newState],
                             successMsg: isOn ? "WiFi 已关闭" : "WiFi 已开启")
         } catch {
-            return CommandResult(success: false, message: "WiFi 切换失败: \(error.localizedDescription)")
+            return .simple("WiFi 切换失败: \(error.localizedDescription)", success: false)
         }
     }
 
     // MARK: - Helpers
 
-    private func runAppleScript(script: String, successMsg: String) -> CommandResult {
+    private func runAppleScript(script: String, successMsg: String) -> AgentResponse {
         var error: NSDictionary?
         if let scriptObject = NSAppleScript(source: script) {
             scriptObject.executeAndReturnError(&error)
             if let error = error {
-                return CommandResult(success: false, message: "执行失败: \(error)")
+                return .simple("执行失败: \(error)", success: false)
             }
-            return CommandResult(success: true, message: successMsg)
+            return .simple(successMsg)
         }
-        return CommandResult(success: false, message: "脚本创建失败")
+        return .simple("脚本创建失败", success: false)
     }
 
-    private func runProcess(_ path: String, args: [String], successMsg: String) -> CommandResult {
+    private func runProcess(_ path: String, args: [String], successMsg: String) -> AgentResponse {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = args
         do {
             try process.run()
             process.waitUntilExit()
-            return CommandResult(success: process.terminationStatus == 0, message: process.terminationStatus == 0 ? successMsg : "命令执行失败")
+            return .simple(process.terminationStatus == 0 ? successMsg : "命令执行失败",
+                          success: process.terminationStatus == 0)
         } catch {
-            return CommandResult(success: false, message: "执行失败: \(error.localizedDescription)")
+            return .simple("执行失败: \(error.localizedDescription)", success: false)
         }
     }
 }

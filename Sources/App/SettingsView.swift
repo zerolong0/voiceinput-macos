@@ -24,6 +24,8 @@ struct SettingsView: View {
     @State private var llmAPIBaseURL = "https://oneapi.gemiaude.com/v1"
     @State private var llmAPIKey = ""
     @State private var llmModel = "gemini-2.5-flash-lite"
+    @State private var agentModel = "gemini-2.5-flash"
+    @State private var voiceInputModel = "gemini-2.5-flash-lite"
     @State private var saveHistoryEnabled = true
     @State private var muteExternalAudioDuringInput = true
     @State private var interactionSoundEnabled = true
@@ -35,16 +37,17 @@ struct SettingsView: View {
     @State private var isCapturingTerminalHotkey = false
     @State private var terminalHotkeyCaptureHint = "点击快捷键框后直接按键盘录入"
     @State private var localTerminalKeyMonitor: Any?
-    @State private var showAdvancedLLM = false
+
     @State private var launchAtLoginMessage = ""
     @State private var isCapturingHotkey = false
     @State private var hotkeyCaptureHint = "点击快捷键框后直接按键盘录入"
     @State private var hotkeyRuntimeStatus = "等待注册"
     @State private var diagnostics = PermissionDiagnostics.snapshot()
     @State private var localKeyMonitor: Any?
-    @State private var customRewritePrompt = ""
+    @State private var stylePrompts: [String: String] = [:]
+    @State private var editingStyleId: String = ""
+    @State private var showStylePromptSheet = false
     @State private var customIntentPrompt = ""
-    @State private var showRewritePromptSheet = false
     @State private var showIntentPromptSheet = false
     @State private var showAPIKey = false
 
@@ -119,15 +122,22 @@ struct SettingsView: View {
                 .padding(.bottom, 20)
             }
         }
-        .sheet(isPresented: $showRewritePromptSheet) {
-            PromptEditorSheet(
-                title: "自定义改写提示词",
-                initialText: customRewritePrompt.isEmpty
-                    ? PolishClient.defaultSystemPrompt(for: selectedStyle)
-                    : customRewritePrompt,
-                savedValue: $customRewritePrompt,
-                warningText: nil
-            )
+        .sheet(isPresented: $showStylePromptSheet) {
+            let styleId = editingStyleId
+            if let style = styles.first(where: { $0.id == styleId }) {
+                let currentPrompt = stylePrompts[styleId] ?? ""
+                PromptEditorSheet(
+                    title: "\(style.name) — 改写提示词",
+                    initialText: currentPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                        ? PolishClient.defaultSystemPrompt(for: styleId)
+                        : currentPrompt,
+                    savedValue: Binding(
+                        get: { stylePrompts[styleId] ?? "" },
+                        set: { stylePrompts[styleId] = $0 }
+                    ),
+                    warningText: nil
+                )
+            }
         }
         .sheet(isPresented: $showIntentPromptSheet) {
             PromptEditorSheet(
@@ -167,6 +177,8 @@ struct SettingsView: View {
         .onChange(of: llmAPIBaseURL) { _ in syncToSharedDefaults() }
         .onChange(of: llmAPIKey) { _ in syncToSharedDefaults() }
         .onChange(of: llmModel) { _ in syncToSharedDefaults() }
+        .onChange(of: agentModel) { _ in syncToSharedDefaults() }
+        .onChange(of: voiceInputModel) { _ in syncToSharedDefaults() }
         .onChange(of: saveHistoryEnabled) { _ in syncToSharedDefaults() }
         .onChange(of: muteExternalAudioDuringInput) { _ in syncToSharedDefaults() }
         .onChange(of: interactionSoundEnabled) { _ in syncToSharedDefaults() }
@@ -178,7 +190,7 @@ struct SettingsView: View {
             syncToSharedDefaults()
             AppBehaviorController.applyDockVisibility(showInDock: enabled)
         }
-        .onChange(of: customRewritePrompt) { _ in syncToSharedDefaults() }
+        .onChange(of: stylePrompts) { _ in syncToSharedDefaults() }
         .onChange(of: customIntentPrompt) { _ in syncToSharedDefaults() }
         .onDisappear {
             stopHotkeyCapture()
@@ -236,90 +248,21 @@ struct SettingsView: View {
                         name: style.name,
                         icon: style.icon,
                         desc: style.desc,
-                        isSelected: selectedStyle == style.id
+                        isSelected: selectedStyle == style.id,
+                        editAction: {
+                            editingStyleId = style.id
+                            showStylePromptSheet = true
+                        }
                     ) {
                         selectedStyle = style.id
                     }
                 }
             }
-        }
-
-        // Thinking LLM
-        SettingsSection(title: "Thinking (LLM)", icon: "brain.head.profile") {
-            Toggle("启用 AI 润色", isOn: $llmEnabled)
-                .toggleStyle(.switch)
-
-            HStack {
-                Text("当前模型")
-                Spacer()
-                Text(llmModel.isEmpty ? "未设置" : llmModel)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            DisclosureGroup("高级设置", isExpanded: $showAdvancedLLM) {
-                VStack(alignment: .leading, spacing: 10) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("API Base URL")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        TextField("https://oneapi.gemiaude.com/v1", text: $llmAPIBaseURL)
-                            .textFieldStyle(.roundedBorder)
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("API Key")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        HStack(spacing: 4) {
-                            if showAPIKey {
-                                TextField("Bearer token (>=10 chars)", text: $llmAPIKey)
-                                    .textFieldStyle(.roundedBorder)
-                                    .textSelection(.enabled)
-                            } else {
-                                SecureField("Bearer token (>=10 chars)", text: $llmAPIKey)
-                                    .textFieldStyle(.roundedBorder)
-                            }
-                            Button {
-                                showAPIKey.toggle()
-                            } label: {
-                                Image(systemName: showAPIKey ? "eye.slash" : "eye")
-                                    .foregroundStyle(.secondary)
-                            }
-                            .buttonStyle(.borderless)
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("模型")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        TextField("gemini-2.5-flash-lite", text: $llmModel)
-                            .textFieldStyle(.roundedBorder)
-                    }
-                }
-                .padding(.top, 8)
-            }
-        }
-
-        // 自定义改写提示词
-        SettingsSection(title: "自定义改写提示词", icon: "text.quote") {
-            HStack {
-                promptStatusLabel(isEmpty: customRewritePrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                Spacer()
-                Button {
-                    showRewritePromptSheet = true
-                } label: {
-                    Label("编辑", systemImage: "square.and.pencil")
-                        .font(.caption)
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
-            }
-            Text("清空后自动使用内置默认提示词。填入自定义内容后将替代默认提示词进行改写。")
+            Text("点击风格右上角 ✏️ 可为该风格自定义改写提示词。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
+
     }
 
     // MARK: - Tab: Voice Agent
@@ -394,6 +337,73 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var generalContent: some View {
+        // 模型配置
+        SettingsSection(title: "模型配置", icon: "cpu") {
+            Toggle("启用 AI 润色", isOn: $llmEnabled)
+                .toggleStyle(.switch)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("API Base URL")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                TextField("https://oneapi.gemiaude.com/v1", text: $llmAPIBaseURL)
+                    .textFieldStyle(.roundedBorder)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("API Key")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    if showAPIKey {
+                        TextField("Bearer token (>=10 chars)", text: $llmAPIKey)
+                            .textFieldStyle(.roundedBorder)
+                            .textSelection(.enabled)
+                    } else {
+                        SecureField("Bearer token (>=10 chars)", text: $llmAPIKey)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    Button {
+                        showAPIKey.toggle()
+                    } label: {
+                        Image(systemName: showAPIKey ? "eye.slash" : "eye")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
+
+            HStack {
+                Text("Agent 模型")
+                    .font(.subheadline)
+                Spacer()
+                Picker("", selection: $agentModel) {
+                    ForEach(SharedSettings.presetModels, id: \.id) { preset in
+                        Text(preset.label).tag(preset.id)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: 220)
+            }
+
+            HStack {
+                Text("语音润色模型")
+                    .font(.subheadline)
+                Spacer()
+                Picker("", selection: $voiceInputModel) {
+                    ForEach(SharedSettings.presetModels, id: \.id) { preset in
+                        Text(preset.label).tag(preset.id)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: 220)
+            }
+
+            Text("Agent 模型用于意图识别，语音润色模型用于文本改写。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+
         // 权限状态（带操作按钮）
         SettingsSection(title: "权限状态", icon: "lock.shield") {
             PermissionActionRow(icon: "mic.fill", title: "麦克风", desc: "采集语音输入", granted: micGranted, buttonTitle: micButtonTitle) {
@@ -575,8 +585,7 @@ struct SettingsView: View {
     private func refreshPermissions() {
         micGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
         speechGranted = SFSpeechRecognizer.authorizationStatus() == .authorized
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false] as CFDictionary
-        accessibilityGranted = AXIsProcessTrustedWithOptions(options)
+        accessibilityGranted = AXIsProcessTrusted()
     }
 
     // MARK: - Settings Sync
@@ -607,13 +616,20 @@ struct SettingsView: View {
         llmAPIBaseURL = defaults.string(forKey: SharedSettings.Keys.llmAPIBaseURL) ?? llmAPIBaseURL
         llmAPIKey = defaults.string(forKey: SharedSettings.Keys.llmAPIKey) ?? llmAPIKey
         llmModel = defaults.string(forKey: SharedSettings.Keys.llmModel) ?? llmModel
+        agentModel = defaults.string(forKey: SharedSettings.Keys.agentModel) ?? agentModel
+        voiceInputModel = defaults.string(forKey: SharedSettings.Keys.voiceInputModel) ?? voiceInputModel
         saveHistoryEnabled = defaults.object(forKey: SharedSettings.Keys.saveHistoryEnabled) as? Bool ?? true
         muteExternalAudioDuringInput = defaults.object(forKey: SharedSettings.Keys.muteExternalAudioDuringInput) as? Bool ?? true
         interactionSoundEnabled = defaults.object(forKey: SharedSettings.Keys.interactionSoundEnabled) as? Bool ?? false
         launchAtLoginEnabled = defaults.object(forKey: SharedSettings.Keys.launchAtLoginEnabled) as? Bool ?? false
         showInDockEnabled = defaults.object(forKey: SharedSettings.Keys.showInDockEnabled) as? Bool ?? true
         hotkeyRuntimeStatus = defaults.string(forKey: SharedSettings.Keys.hotkeyRuntimeStatus) ?? "等待注册"
-        customRewritePrompt = defaults.string(forKey: SharedSettings.Keys.customRewritePrompt) ?? ""
+        var prompts: [String: String] = [:]
+        for style in styles {
+            let key = SharedSettings.customRewritePromptKey(for: style.id)
+            prompts[style.id] = defaults.string(forKey: key) ?? ""
+        }
+        stylePrompts = prompts
         customIntentPrompt = defaults.string(forKey: SharedSettings.Keys.customIntentPrompt) ?? ""
         sanitizeHotkeyIfNeeded()
     }
@@ -632,12 +648,16 @@ struct SettingsView: View {
         defaults.set(llmAPIBaseURL, forKey: SharedSettings.Keys.llmAPIBaseURL)
         defaults.set(llmAPIKey, forKey: SharedSettings.Keys.llmAPIKey)
         defaults.set(llmModel, forKey: SharedSettings.Keys.llmModel)
+        defaults.set(agentModel, forKey: SharedSettings.Keys.agentModel)
+        defaults.set(voiceInputModel, forKey: SharedSettings.Keys.voiceInputModel)
         defaults.set(saveHistoryEnabled, forKey: SharedSettings.Keys.saveHistoryEnabled)
         defaults.set(muteExternalAudioDuringInput, forKey: SharedSettings.Keys.muteExternalAudioDuringInput)
         defaults.set(interactionSoundEnabled, forKey: SharedSettings.Keys.interactionSoundEnabled)
         defaults.set(launchAtLoginEnabled, forKey: SharedSettings.Keys.launchAtLoginEnabled)
         defaults.set(showInDockEnabled, forKey: SharedSettings.Keys.showInDockEnabled)
-        defaults.set(customRewritePrompt, forKey: SharedSettings.Keys.customRewritePrompt)
+        for style in styles {
+            defaults.set(stylePrompts[style.id] ?? "", forKey: SharedSettings.customRewritePromptKey(for: style.id))
+        }
         defaults.set(customIntentPrompt, forKey: SharedSettings.Keys.customIntentPrompt)
         DistributedNotificationCenter.default().postNotificationName(
             Notification.Name(SharedNotifications.hotkeyChanged),
