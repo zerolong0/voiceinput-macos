@@ -50,10 +50,9 @@ struct StyleButton: View {
                     Text(desc).font(.caption).foregroundStyle(isSelected ? Color.white.opacity(0.8) : .secondary)
                 }
                 Spacer()
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(Color.white)
-                }
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isSelected ? Color.white : Color.secondary)
+                    .font(.system(size: 16))
             }
             .padding(12)
             .background(isSelected ? Color.accentColor : Color.secondary.opacity(0.08))
@@ -61,5 +60,6 @@ struct StyleButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
     }
 }

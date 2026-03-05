@@ -235,6 +235,7 @@ class VoiceInputController: IMKInputController {
     /// Activate voice input mode
     private func activateVoiceInput() {
         NSLog("VoiceInput: Activated")
+        isVoiceInputActive = true
         didAttemptRecognitionRecovery = false
         currentText = ""
         pendingCopyContext = nil
@@ -465,10 +466,70 @@ class VoiceInputController: IMKInputController {
 
     // MARK: - Text Insertion
 
-    /// Insert text into the client application
+    /// Insert text — try IMK client first, then AX API fallback
     private func insertText(_ text: String) -> Bool {
-        guard let client = self.client() as? IMKTextInput else { return false }
-        client.insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))
+        // Primary: IMK client (synchronous / same app)
+        if let client = self.client() as? IMKTextInput {
+            client.insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))
+            return true
+        }
+        // Fallback: AX API (works after async LLM delay)
+        return insertTextViaAXFallback(text)
+    }
+
+    private func insertTextViaAXFallback(_ text: String) -> Bool {
+        guard AccessibilityTrust.isTrusted(prompt: false) else { return false }
+        let systemWide = AXUIElementCreateSystemWide()
+        var focused: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(systemWide, kAXFocusedUIElementAttribute as CFString, &focused) == .success,
+              let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else { return false }
+        let element = focused as! AXUIElement
+
+        // Try direct AX value set on editable element
+        var roleRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success,
+           let role = roleRef as? String,
+           ["AXTextField", "AXTextArea", "AXSearchField"].contains(role) {
+            var valueRef: CFTypeRef?
+            var rangeRef: CFTypeRef?
+            if AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueRef) == .success,
+               let current = valueRef as? String,
+               AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &rangeRef) == .success,
+               let rangeRef, CFGetTypeID(rangeRef) == AXValueGetTypeID() {
+                let axRange = rangeRef as! AXValue
+                var sel = CFRange()
+                if AXValueGetType(axRange) == .cfRange, AXValueGetValue(axRange, .cfRange, &sel) {
+                    let ns = current as NSString
+                    let loc = max(0, min(sel.location, ns.length))
+                    let len = max(0, min(sel.length, ns.length - loc))
+                    let merged = ns.replacingCharacters(in: NSRange(location: loc, length: len), with: text)
+                    if AXUIElementSetAttributeValue(element, kAXValueAttribute as CFString, merged as CFTypeRef) == .success {
+                        var caret = CFRange(location: loc + (text as NSString).length, length: 0)
+                        if let axCaret = AXValueCreate(.cfRange, &caret) {
+                            _ = AXUIElementSetAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, axCaret)
+                        }
+                        return true
+                    }
+                }
+            }
+        }
+
+        // Last resort: Cmd+V via CGEvent
+        let pasteboard = NSPasteboard.general
+        let original = pasteboard.string(forType: .string)
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        let src = CGEventSource(stateID: .privateState)
+        let events: [(CGKeyCode, Bool)] = [(0x37, true), (0x09, true), (0x09, false), (0x37, false)]
+        for (key, down) in events {
+            let e = CGEvent(keyboardEventSource: src, virtualKey: key, keyDown: down)
+            if key == 0x09 { e?.flags = .maskCommand }
+            e?.post(tap: .cghidEventTap)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            pasteboard.clearContents()
+            if let original { pasteboard.setString(original, forType: .string) }
+        }
         return true
     }
 
