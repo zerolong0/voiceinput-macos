@@ -18,15 +18,26 @@ final class VoiceTerminalService: NSObject {
     /// Stays true from stop() until we finish processing, to suppress async errors
     private var suppressErrors = false
 
+    // Voice confirmation
+    private var confirmationEngine: WhisperEngine?
+    private var confirmationIntent: RecognizedIntent?
+    private var confirmationTimer: Timer?
+    private var isInVoiceConfirmation = false
+
+    private let confirmKeywords = ["确认", "好的", "执行", "是", "是的", "可以", "对"]
+    private let cancelKeywords = ["取消", "不要", "算了", "不", "不是", "停"]
+
     private override init() {
         super.init()
         whisperEngine.delegate = self
         try? whisperEngine.loadModel(from: "")
 
         terminalPanel.onConfirm = { [weak self] intent in
+            self?.stopVoiceConfirmation()
             self?.executeCommand(intent)
         }
         terminalPanel.onCancel = { [weak self] in
+            self?.stopVoiceConfirmation()
             self?.reset()
         }
         terminalPanel.onFallbackSelect = { [weak self] type, text in
@@ -187,14 +198,42 @@ final class VoiceTerminalService: NSObject {
     private func processIntent(_ text: String) {
         terminalPanel.setState(.recognizing(text))
 
+        let detector = SceneDetector.shared
+        let context = IntentContext(
+            appName: detector.getCurrentAppName(),
+            bundleID: detector.getCurrentBundleId(),
+            windowTitle: detector.getCurrentWindowTitle(),
+            scene: detector.detectCurrentScene()
+        )
+
         Task {
-            let intent = await intentRecognizer.recognize(text: text)
+            let intent = await intentRecognizer.recognize(text: text, context: context)
 
             await MainActor.run {
                 if intent.type == .unrecognized {
                     terminalPanel.showFallbackSelect(text: text)
                 } else {
-                    terminalPanel.setState(.confirming(intent))
+                    switch intent.type.riskLevel {
+                    case .safe:
+                        self.executeCommand(intent)
+
+                    case .low:
+                        self.terminalPanel.setState(.autoExecuting(intent))
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                            guard let self else { return }
+                            if case .autoExecuting = self.terminalPanel.currentState {
+                                self.executeCommand(intent)
+                            }
+                        }
+
+                    case .medium:
+                        self.terminalPanel.setState(.confirming(intent))
+                        self.startVoiceConfirmation(for: intent)
+
+                    case .dangerous:
+                        self.terminalPanel.setState(.confirming(intent))
+                        // No voice confirmation — button only for dangerous commands
+                    }
                 }
             }
         }
@@ -217,8 +256,54 @@ final class VoiceTerminalService: NSObject {
         }
     }
 
+    // MARK: - Voice confirmation
+
+    private func startVoiceConfirmation(for intent: RecognizedIntent) {
+        confirmationIntent = intent
+        isInVoiceConfirmation = true
+
+        let engine = WhisperEngine()
+        engine.delegate = self
+        try? engine.loadModel(from: "")
+        confirmationEngine = engine
+        try? engine.start()
+
+        confirmationTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: false) { [weak self] _ in
+            self?.stopVoiceConfirmation()
+        }
+    }
+
+    private func handleConfirmationPartialResult(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let intent = confirmationIntent {
+            terminalPanel.setState(.voiceConfirming(intent, trimmed))
+        }
+
+        let lower = trimmed.lowercased()
+        if confirmKeywords.contains(where: { lower.contains($0) }) {
+            stopVoiceConfirmation()
+            if let intent = confirmationIntent {
+                executeCommand(intent)
+            }
+        } else if cancelKeywords.contains(where: { lower.contains($0) }) {
+            stopVoiceConfirmation()
+            reset()
+        }
+    }
+
+    private func stopVoiceConfirmation() {
+        confirmationTimer?.invalidate()
+        confirmationTimer = nil
+        confirmationEngine?.stop()
+        confirmationEngine = nil
+        isInVoiceConfirmation = false
+        confirmationIntent = nil
+    }
+
     private func reset() {
         suppressErrors = true
+        stopVoiceConfirmation()
         whisperEngine.stop()
         terminalPanel.hide()
         isActive = false
@@ -250,21 +335,37 @@ final class VoiceTerminalService: NSObject {
 extension VoiceTerminalService: WhisperEngineDelegate {
     func whisperEngine(_ engine: WhisperEngine, didTranscribe result: TranscriptionResult) {
         DispatchQueue.main.async { [weak self] in
-            guard let self, self.isActive, !self.isStoppingRecording else { return }
-            self.currentText = result.text
+            guard let self else { return }
+            if engine === self.confirmationEngine {
+                self.handleConfirmationPartialResult(result.text)
+            } else if self.isActive, !self.isStoppingRecording {
+                self.currentText = result.text
+            }
         }
     }
 
     func whisperEngine(_ engine: WhisperEngine, didUpdatePartialResult text: String) {
         DispatchQueue.main.async { [weak self] in
-            guard let self, self.isActive, !self.isStoppingRecording else { return }
-            self.currentText = text
+            guard let self else { return }
+            if engine === self.confirmationEngine {
+                self.handleConfirmationPartialResult(text)
+            } else if self.isActive, !self.isStoppingRecording {
+                self.currentText = text
+                if case .listening = self.terminalPanel.currentState {
+                    self.terminalPanel.updateListeningText(text)
+                }
+            }
         }
     }
 
     func whisperEngine(_ engine: WhisperEngine, didFailWithError error: WhisperError) {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
+            if engine === self.confirmationEngine {
+                // Confirmation engine failed — just stop voice confirmation, keep button mode
+                self.stopVoiceConfirmation()
+                return
+            }
             // Suppress errors from intentional stop (async callback from recognitionTask.cancel)
             guard self.isActive, !self.isStoppingRecording, !self.suppressErrors else { return }
             self.terminalPanel.setState(.error("识别失败: \(error.localizedDescription)"))

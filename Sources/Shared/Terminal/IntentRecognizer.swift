@@ -1,11 +1,32 @@
 import Foundation
 
+enum RiskLevel {
+    case safe       // 直接执行，零 UI
+    case low        // 0.5s 闪显后自动执行
+    case medium     // 语音+按钮确认
+    case dangerous  // 仅按钮确认（禁用语音快捷确认）
+}
+
 enum IntentType: String, Codable {
     case addCalendar
     case createNote
     case openApp
     case runCommand
+    case systemControl
+    case webSearch
     case unrecognized
+
+    var riskLevel: RiskLevel {
+        switch self {
+        case .openApp:        return .safe
+        case .webSearch:      return .safe
+        case .createNote:     return .low
+        case .addCalendar:    return .low
+        case .systemControl:  return .medium
+        case .runCommand:     return .dangerous
+        case .unrecognized:   return .medium
+        }
+    }
 }
 
 struct RecognizedIntent {
@@ -46,6 +67,14 @@ private struct IntentJSON: Decodable {
     let confidence: Double
 }
 
+struct IntentContext {
+    let appName: String?
+    let bundleID: String?
+    let windowTitle: String?
+    let scene: AppScene
+    static let empty = IntentContext(appName: nil, bundleID: nil, windowTitle: nil, scene: .unknown)
+}
+
 final class IntentRecognizer {
     private let session: URLSession
 
@@ -53,7 +82,7 @@ final class IntentRecognizer {
         self.session = session
     }
 
-    func recognize(text: String) async -> RecognizedIntent {
+    func recognize(text: String, context: IntentContext = .empty) async -> RecognizedIntent {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             return unrecognized(trimmed)
@@ -74,10 +103,21 @@ final class IntentRecognizer {
             return unrecognized(trimmed)
         }
 
+        var effectivePrompt = systemPrompt
+        if context.appName != nil || context.windowTitle != nil {
+            var block = "\n\n【当前用户环境】\n"
+            if let app = context.appName { block += "- 前台应用: \(app)\n" }
+            if let bid = context.bundleID { block += "- Bundle ID: \(bid)\n" }
+            if let title = context.windowTitle { block += "- 窗口标题: \(title)\n" }
+            block += "- 场景: \(context.scene.displayName)\n"
+            block += "请根据当前环境优化意图识别。\n"
+            effectivePrompt += block
+        }
+
         let req = IntentLLMRequest(
             model: model,
             messages: [
-                .init(role: "system", content: systemPrompt),
+                .init(role: "system", content: effectivePrompt),
                 .init(role: "user", content: trimmed)
             ],
             temperature: 0.0,
@@ -152,6 +192,10 @@ final class IntentRecognizer {
             summary = "打开应用: \(parsed.title)"
         case .runCommand:
             summary = "执行命令: \(parsed.title)"
+        case .systemControl:
+            summary = "系统控制: \(parsed.title)"
+        case .webSearch:
+            summary = "搜索: \(parsed.title)"
         case .unrecognized:
             summary = originalText
         }
@@ -175,7 +219,7 @@ final class IntentRecognizer {
         )
     }
 
-    private var systemPrompt: String {
+    static var defaultSystemPrompt: String {
         """
         你是语音命令意图识别器。用户会说出一个命令，你需要识别意图并输出严格的JSON。
 
@@ -184,12 +228,14 @@ final class IntentRecognizer {
         2. createNote - 创建笔记（如"创建笔记 购物清单"、"记一下明天要买牛奶"）
         3. openApp - 打开应用程序（如"打开Safari"、"打开记事本"、"打开微信"）
         4. runCommand - 执行终端命令（如"执行ls"、"运行 brew update"）
+        5. systemControl - 系统控制（如"音量调到50"、"静音"、"深色模式"、"锁屏"、"截图"、"关WiFi"）
+        6. webSearch - 搜索网页（如"搜索天气预报"、"百度量子计算"、"Google Swift并发"）
 
         输出格式（只输出JSON，不要其他内容）：
         {"type":"addCalendar","title":"会议","detail":"明天下午3点","confidence":0.95}
 
         字段说明：
-        - type: 意图类型，必须是上述4种之一
+        - type: 意图类型，必须是上述6种之一
         - title: 简短标题
         - detail: 详细信息（日期时间/笔记内容/应用名/命令内容）
         - confidence: 置信度 0.0-1.0
@@ -220,10 +266,31 @@ final class IntentRecognizer {
         【createNote 规则】：
         title 填笔记标题，detail 填笔记正文内容。如用户说"记一下明天要买牛奶"，title:"购物备忘", detail:"明天要买牛奶"。
 
+        【systemControl 规则】：
+        title 填操作描述，detail 填结构化动作：
+        - 音量: "volume_up" / "volume_down" / "mute" / "unmute" / "set_volume:数字"
+        - 亮度: "brightness_up" / "brightness_down"
+        - 深色模式: "toggle_dark_mode"
+        - 锁屏: "lock_screen"  ·  休眠: "sleep"
+        - 勿扰: "toggle_dnd"  ·  截图: "screenshot" / "screenshot_clipboard"
+        - WiFi: "toggle_wifi"
+
+        【webSearch 规则】：
+        title 填搜索摘要，detail 填完整搜索词。
+        用户指定引擎（"百度"/"Google"）时保留在 detail 中。
+
         如果无法识别意图，输出：
         {"type":"unrecognized","title":"","detail":"","confidence":0.0}
 
         只输出JSON，不要输出任何其他文字。
         """
+    }
+
+    private var systemPrompt: String {
+        let custom = SharedSettings.defaults.string(forKey: SharedSettings.Keys.customIntentPrompt) ?? ""
+        if !custom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return custom
+        }
+        return Self.defaultSystemPrompt
     }
 }

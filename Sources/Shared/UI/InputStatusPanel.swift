@@ -293,6 +293,69 @@ final class InputStatusPanel {
         render(.init(stage: .rewriting, statusText: "", displayText: text, showsCopy: false, showsClose: false, a11yLabel: "正在改写"))
     }
 
+    func showCopyFallback(finalText: String) {
+        autoHideTimer?.invalidate()
+        autoHideTimer = nil
+        currentStage = .copyFallback
+
+        completeRewritingProgressIfNeeded()
+        stopWaveAnimation()
+        spinner.stopAnimation(nil)
+
+        card.material = .hudWindow
+        card.layer?.cornerRadius = 22
+        card.layer?.borderColor = NSColor.separatorColor.withAlphaComponent(0.35).cgColor
+
+        // Expanded layout: title top-aligned
+        titleCenterYConstraint?.isActive = false
+        titleTopConstraint?.isActive = true
+        closeCenterYConstraint?.isActive = false
+        closeTopConstraint?.isActive = true
+        iconCenterYConstraint?.isActive = false
+        iconTopConstraint?.isActive = true
+
+        iconView.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: nil)
+        iconView.contentTintColor = .controlAccentColor
+        iconView.isHidden = false
+
+        let truncated = finalText.count > 20 ? String(finalText.prefix(20)) + "..." : finalText
+        titleLabel.stringValue = truncated
+        titleLabel.font = .systemFont(ofSize: 15, weight: .semibold)
+        titleLabel.textColor = .labelColor
+
+        subtitleLabel.stringValue = "未找到输入窗口，点击复制后粘贴"
+        subtitleLabel.isHidden = false
+
+        primaryButton.isHidden = true
+        copyButton.isHidden = false
+        closeButton.isHidden = false
+        updateTitleTrailingConstraints(showCopy: false, showClose: true)
+        panel.setAccessibilityLabel("未找到输入窗口")
+
+        let height: CGFloat = 80
+        heightConstraint?.constant = height
+
+        let font = NSFont.systemFont(ofSize: 15, weight: .semibold)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font]
+        let textW = (truncated as NSString).size(withAttributes: attrs).width
+        let width = max(260, min(380, ceil(11 + 16 + 9 + textW + 80)))
+
+        var frame = panel.frame
+        frame.size = NSSize(width: width, height: height)
+        panel.setFrame(frame, display: true)
+        positionBottomCenter()
+
+        if !panel.isVisible {
+            panel.orderFrontRegardless()
+        }
+
+        // Position copy button at bottom-right in expanded mode
+        copyButton.setFrameOrigin(NSPoint(
+            x: frame.size.width - copyButton.frame.width - 12,
+            y: 12
+        ))
+    }
+
     func showError(_ text: String) {
         render(.init(stage: .error, statusText: "识别失败", displayText: text, showsCopy: false, showsClose: true, a11yLabel: "识别失败"))
     }
@@ -418,7 +481,8 @@ final class InputStatusPanel {
         case .listening:
             return visibleTextForListening(rawText)
         case .rewriting:
-            return "改写中"
+            let trimmed = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? "改写中" : trimmed
         default:
             return rawText
         }

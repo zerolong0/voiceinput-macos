@@ -138,7 +138,7 @@ final class PolishClient {
         baseURL.contains("open.bigmodel.cn") || baseURL.contains("oneapi.gemiaude.com") || baseURL.contains("/v1") || baseURL.contains("/v4") || baseURL.contains("/chat/completions")
     }
 
-    private func systemPrompt(for style: String) -> String {
+    static func defaultSystemPrompt(for style: String) -> String {
         let baseRules = """
         只改写用户输入，不做扩写。
         只允许纠错、语序优化、术语规范。
@@ -184,6 +184,14 @@ final class PolishClient {
             \(baseRules)
             """
         }
+    }
+
+    private func systemPrompt(for style: String) -> String {
+        let custom = SharedSettings.defaults.string(forKey: SharedSettings.Keys.customRewritePrompt) ?? ""
+        if !custom.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return custom
+        }
+        return Self.defaultSystemPrompt(for: style)
     }
 
     private func sanitizeModelOutput(_ content: String, original: String) throws -> String {

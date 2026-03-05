@@ -568,7 +568,7 @@ final class AppHotkeyVoiceService: NSObject {
             finalText: finalText,
             style: style
         )
-        statusPanel.show(status: "无法直接输入", text: "未检测到输入框，点击复制后手动粘贴", showCopy: true)
+        statusPanel.showCopyFallback(finalText: finalText)
         RealtimeSessionStore.shared.setStage(.pendingCopy, text: "无焦点，等待复制")
         InputHistoryStore.shared.append(
             InputHistoryItem(
@@ -607,7 +607,7 @@ final class AppHotkeyVoiceService: NSObject {
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
 
-        let source = CGEventSource(stateID: .combinedSessionState)
+        let source = CGEventSource(stateID: .privateState)
         let cmdDown = CGEvent(keyboardEventSource: source, virtualKey: 0x37, keyDown: true)
         let vDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true)
         let vUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false)

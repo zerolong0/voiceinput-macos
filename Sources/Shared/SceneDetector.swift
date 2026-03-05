@@ -246,7 +246,7 @@ class SceneDetector {
     }
 
     /// 获取当前窗口标题
-    private func getCurrentWindowTitle() -> String? {
+    func getCurrentWindowTitle() -> String? {
         // 使用 AppleScript 获取当前窗口标题
         let script = """
         tell application "System Events"

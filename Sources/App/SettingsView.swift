@@ -3,15 +3,23 @@ import AVFoundation
 import Speech
 import ApplicationServices
 
+// MARK: - Tab 枚举
+enum SettingsTab: String, CaseIterable {
+    case voiceInput = "语音输入"
+    case voiceAgent = "Voice Agent"
+    case general = "通用设置"
+}
+
 // MARK: - 设置视图
 struct SettingsView: View {
     var embedded: Bool = false
     @AppStorage("selectedStyle") private var selectedStyle = "default"
     @AppStorage("hotkeyEnabled") private var hotkeyEnabled = true
-    @AppStorage("hotkeyModifiers") private var hotkeyModifiers = 2048 // optionKey
-    @AppStorage("hotkeyKeyCode") private var hotkeyKeyCode = 49 // Space
+    @AppStorage("hotkeyModifiers") private var hotkeyModifiers = 2048
+    @AppStorage("hotkeyKeyCode") private var hotkeyKeyCode = 49
     @AppStorage("hotkeyHoldToStopThreshold") private var hotkeyHoldToStopThreshold = 0.35
 
+    @State private var selectedTab: SettingsTab = .voiceInput
     @State private var llmEnabled = false
     @State private var llmAPIBaseURL = "https://oneapi.gemiaude.com/v1"
     @State private var llmAPIKey = ""
@@ -22,8 +30,8 @@ struct SettingsView: View {
     @State private var launchAtLoginEnabled = false
     @State private var showInDockEnabled = true
     @State private var terminalHotkeyEnabled = false
-    @State private var terminalHotkeyModifiers = 4096 // controlKey
-    @State private var terminalHotkeyKeyCode = 49 // Space
+    @State private var terminalHotkeyModifiers = 4096
+    @State private var terminalHotkeyKeyCode = 49
     @State private var isCapturingTerminalHotkey = false
     @State private var terminalHotkeyCaptureHint = "点击快捷键框后直接按键盘录入"
     @State private var localTerminalKeyMonitor: Any?
@@ -34,6 +42,13 @@ struct SettingsView: View {
     @State private var hotkeyRuntimeStatus = "等待注册"
     @State private var diagnostics = PermissionDiagnostics.snapshot()
     @State private var localKeyMonitor: Any?
+    @State private var customRewritePrompt = ""
+    @State private var customIntentPrompt = ""
+
+    // 权限状态
+    @State private var micGranted = false
+    @State private var speechGranted = false
+    @State private var accessibilityGranted = false
 
     private let styles: [(id: String, name: String, icon: String, desc: String)] = [
         ("default", "智能模式", "sparkles", "自动识别场景"),
@@ -53,251 +68,29 @@ struct SettingsView: View {
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 20)
-                .padding(.bottom, 16)
+                .padding(.bottom, 12)
             }
+
+            // Tab Picker
+            Picker("", selection: $selectedTab) {
+                ForEach(SettingsTab.allCases, id: \.self) { tab in
+                    Text(tab.rawValue).tag(tab)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 16)
 
             // 内容
             ScrollView {
                 VStack(spacing: 24) {
-                    // 快捷键设置
-                    SettingsSection(title: "快捷键", icon: "keyboard") {
-                        Toggle("启用全局快捷键", isOn: $hotkeyEnabled)
-                            .toggleStyle(.switch)
-
-                        Button {
-                            if isCapturingHotkey {
-                                stopHotkeyCapture()
-                            } else {
-                                startHotkeyCapture()
-                            }
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("激活按键")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Text(isCapturingHotkey ? "请直接按下快捷键..." : hotkeyDescription)
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(.primary)
-                                }
-                                Spacer()
-                                Image(systemName: isCapturingHotkey ? "keyboard.badge.ellipsis" : "keyboard")
-                                    .foregroundStyle(Color.accentColor)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(Color.secondary.opacity(0.12))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .stroke(isCapturingHotkey ? Color.accentColor : Color.clear, lineWidth: 1.5)
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        Text(hotkeyCaptureHint)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        Text("推荐热键：F6 / F7 / F8（如键盘需要可配合 Fn）。按住说话松开结束；双击快捷键进入连续模式，再按一次结束。")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        HStack {
-                            Text("运行状态:")
-                            Spacer()
-                            Text(hotkeyRuntimeStatus)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-
-                        Text("连续模式说明：双击快捷键开始持续收音，期间松开按键不会结束；再次按下同一快捷键即结束并进入改写。")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    // 语音终端
-                    SettingsSection(title: "语音终端 (Mode 2)", icon: "terminal") {
-                        Toggle("启用语音终端", isOn: $terminalHotkeyEnabled)
-                            .toggleStyle(.switch)
-
-                        Button {
-                            if isCapturingTerminalHotkey {
-                                stopTerminalHotkeyCapture()
-                            } else {
-                                startTerminalHotkeyCapture()
-                            }
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("终端激活按键")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Text(isCapturingTerminalHotkey ? "请直接按下快捷键..." : terminalHotkeyDescription)
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(.primary)
-                                }
-                                Spacer()
-                                Image(systemName: isCapturingTerminalHotkey ? "keyboard.badge.ellipsis" : "keyboard")
-                                    .foregroundStyle(Color.accentColor)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(Color.secondary.opacity(0.12))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .stroke(isCapturingTerminalHotkey ? Color.accentColor : Color.clear, lineWidth: 1.5)
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        Text(terminalHotkeyCaptureHint)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-
-                        Text("按住快捷键说话，松开后 AI 识别意图并执行（日历/笔记/打开App/命令）。")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    // 输入风格
-                    SettingsSection(title: "输入风格", icon: "wand.and.stars") {
-                        VStack(spacing: 8) {
-                            ForEach(styles, id: \.id) { style in
-                                StyleButton(
-                                    id: style.id,
-                                    name: style.name,
-                                    icon: style.icon,
-                                    desc: style.desc,
-                                    isSelected: selectedStyle == style.id
-                                ) {
-                                    selectedStyle = style.id
-                                }
-                            }
-                        }
-                    }
-
-                    SettingsSection(title: "Thinking (LLM)", icon: "brain.head.profile") {
-                        Toggle("启用 AI 润色", isOn: $llmEnabled)
-                            .toggleStyle(.switch)
-
-                        HStack {
-                            Text("当前模型")
-                            Spacer()
-                            Text(llmModel.isEmpty ? "未设置" : llmModel)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                        }
-
-                        DisclosureGroup("高级设置", isExpanded: $showAdvancedLLM) {
-                            VStack(alignment: .leading, spacing: 10) {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("API Base URL")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    TextField("https://oneapi.gemiaude.com/v1", text: $llmAPIBaseURL)
-                                        .textFieldStyle(.roundedBorder)
-                                }
-
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("API Key")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    SecureField("Bearer token (>=10 chars)", text: $llmAPIKey)
-                                        .textFieldStyle(.roundedBorder)
-                                }
-
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("模型")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    TextField("gemini-2.5-flash-lite", text: $llmModel)
-                                        .textFieldStyle(.roundedBorder)
-                                }
-                            }
-                            .padding(.top, 8)
-                        }
-                    }
-
-                    SettingsSection(title: "音频", icon: "speaker.wave.2") {
-                        Toggle("语音输入时静音其他音频", isOn: $muteExternalAudioDuringInput)
-                            .toggleStyle(.switch)
-                        Toggle("交互提示音", isOn: $interactionSoundEnabled)
-                            .toggleStyle(.switch)
-                        Text("语音终端各阶段播放系统提示音 (聆听/确认/成功/失败)。")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    SettingsSection(title: "应用行为", icon: "macwindow") {
-                        Toggle("登录时启动应用", isOn: $launchAtLoginEnabled)
-                            .toggleStyle(.switch)
-                        Toggle("在 Dock 中显示应用", isOn: $showInDockEnabled)
-                            .toggleStyle(.switch)
-                        if !launchAtLoginMessage.isEmpty {
-                            Text(launchAtLoginMessage)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    SettingsSection(title: "隐私与历史", icon: "clock.arrow.trianglehead.counterclockwise.rotate.90") {
-                        Toggle("保存历史记录（最多 100 条）", isOn: $saveHistoryEnabled)
-                            .toggleStyle(.switch)
-                        HStack {
-                            Button("清空历史记录") {
-                                InputHistoryStore.shared.clear()
-                            }
-                            .buttonStyle(.bordered)
-
-                            Text("仅清空本地记录")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-
-                    // 权限状态
-                    SettingsSection(title: "权限状态", icon: "lock.shield") {
-                        PermissionStatusRow()
-                    }
-
-                    SettingsSection(title: "权限诊断", icon: "stethoscope") {
-                        VStack(alignment: .leading, spacing: 8) {
-                            DiagnosticRow(title: "Bundle ID", value: diagnostics.bundleID)
-                            DiagnosticRow(title: "可执行路径", value: diagnostics.executablePath)
-                            DiagnosticRow(title: "路径稳定性", value: diagnostics.inApplications ? "已固定 (/Applications)" : "临时路径 (建议安装到 /Applications)")
-                            DiagnosticRow(title: "AX API", value: diagnostics.accessibilityAXAPI ? "已授权" : "未授权")
-                            DiagnosticRow(title: "TCC 数据库", value: diagnostics.accessibilityTCC ? "已授权" : "未授权")
-                            DiagnosticRow(title: "语音识别", value: diagnostics.speechAuthorized ? "已授权" : "未授权")
-                            DiagnosticRow(title: "麦克风", value: diagnostics.microphoneAuthorized ? "已授权" : "未授权")
-                            HStack {
-                                Button("刷新诊断") {
-                                    diagnostics = PermissionDiagnostics.snapshot()
-                                }
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
-
-                                if !diagnostics.inApplications {
-                                    Text("建议使用 /Applications/VoiceInput.app 启动")
-                                        .font(.caption)
-                                        .foregroundStyle(.orange)
-                                }
-                            }
-                        }
-                    }
-
-                    // 使用说明
-                    SettingsSection(title: "使用说明", icon: "questionmark.circle") {
-                        VStack(alignment: .leading, spacing: 12) {
-                            UsageRow(icon: "keyboard", text: "按 Option + Space 激活语音输入")
-                            UsageRow(icon: "text.bubble", text: "说话完成后自动识别并输入文字")
-                            UsageRow(icon: "hand.tap", text: "在系统偏好设置中添加输入法")
-                        }
+                    switch selectedTab {
+                    case .voiceInput:
+                        voiceInputContent
+                    case .voiceAgent:
+                        voiceAgentContent
+                    case .general:
+                        generalContent
                     }
                 }
                 .padding(.horizontal, 24)
@@ -313,11 +106,6 @@ struct SettingsView: View {
                     .buttonStyle(.bordered)
 
                     Spacer()
-
-                    Button("打开输入法设置") {
-                        openInputMethodSettings()
-                    }
-                    .buttonStyle(.bordered)
 
                     Button("打开系统设置") {
                         openSystemPreferences()
@@ -337,56 +125,28 @@ struct SettingsView: View {
             SharedSettings.bootstrapDefaults()
             syncFromSharedDefaults()
             diagnostics = PermissionDiagnostics.snapshot()
+            refreshPermissions()
         }
         .onReceive(Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()) { _ in
             refreshHotkeyRuntimeStatus()
             diagnostics = PermissionDiagnostics.snapshot()
+            refreshPermissions()
         }
-        .onChange(of: selectedStyle) { _ in
-            syncToSharedDefaults()
-        }
-        .onChange(of: hotkeyEnabled) { _ in
-            syncToSharedDefaults()
-        }
-        .onChange(of: hotkeyModifiers) { _ in
-            syncToSharedDefaults()
-        }
-        .onChange(of: hotkeyKeyCode) { _ in
-            syncToSharedDefaults()
-        }
-        .onChange(of: hotkeyHoldToStopThreshold) { _ in
-            syncToSharedDefaults()
-        }
-        .onChange(of: terminalHotkeyEnabled) { _ in
-            syncToSharedDefaults()
-        }
-        .onChange(of: terminalHotkeyModifiers) { _ in
-            syncToSharedDefaults()
-        }
-        .onChange(of: terminalHotkeyKeyCode) { _ in
-            syncToSharedDefaults()
-        }
-        .onChange(of: llmEnabled) { _ in
-            syncToSharedDefaults()
-        }
-        .onChange(of: llmAPIBaseURL) { _ in
-            syncToSharedDefaults()
-        }
-        .onChange(of: llmAPIKey) { _ in
-            syncToSharedDefaults()
-        }
-        .onChange(of: llmModel) { _ in
-            syncToSharedDefaults()
-        }
-        .onChange(of: saveHistoryEnabled) { _ in
-            syncToSharedDefaults()
-        }
-        .onChange(of: muteExternalAudioDuringInput) { _ in
-            syncToSharedDefaults()
-        }
-        .onChange(of: interactionSoundEnabled) { _ in
-            syncToSharedDefaults()
-        }
+        .onChange(of: selectedStyle) { _ in syncToSharedDefaults() }
+        .onChange(of: hotkeyEnabled) { _ in syncToSharedDefaults() }
+        .onChange(of: hotkeyModifiers) { _ in syncToSharedDefaults() }
+        .onChange(of: hotkeyKeyCode) { _ in syncToSharedDefaults() }
+        .onChange(of: hotkeyHoldToStopThreshold) { _ in syncToSharedDefaults() }
+        .onChange(of: terminalHotkeyEnabled) { _ in syncToSharedDefaults() }
+        .onChange(of: terminalHotkeyModifiers) { _ in syncToSharedDefaults() }
+        .onChange(of: terminalHotkeyKeyCode) { _ in syncToSharedDefaults() }
+        .onChange(of: llmEnabled) { _ in syncToSharedDefaults() }
+        .onChange(of: llmAPIBaseURL) { _ in syncToSharedDefaults() }
+        .onChange(of: llmAPIKey) { _ in syncToSharedDefaults() }
+        .onChange(of: llmModel) { _ in syncToSharedDefaults() }
+        .onChange(of: saveHistoryEnabled) { _ in syncToSharedDefaults() }
+        .onChange(of: muteExternalAudioDuringInput) { _ in syncToSharedDefaults() }
+        .onChange(of: interactionSoundEnabled) { _ in syncToSharedDefaults() }
         .onChange(of: launchAtLoginEnabled) { enabled in
             syncToSharedDefaults()
             launchAtLoginMessage = AppBehaviorController.applyLaunchAtLogin(enabled: enabled) ?? ""
@@ -395,16 +155,421 @@ struct SettingsView: View {
             syncToSharedDefaults()
             AppBehaviorController.applyDockVisibility(showInDock: enabled)
         }
+        .onChange(of: customRewritePrompt) { _ in syncToSharedDefaults() }
+        .onChange(of: customIntentPrompt) { _ in syncToSharedDefaults() }
         .onDisappear {
             stopHotkeyCapture()
             stopTerminalHotkeyCapture()
         }
     }
 
-    private func openInputMethodSettings() {
-        let url = URL(string: "x-apple.systempreferences:com.apple.preference.keyboard?InputSources")!
+    // MARK: - Tab: 语音输入
+
+    @ViewBuilder
+    private var voiceInputContent: some View {
+        // 快捷键
+        SettingsSection(title: "快捷键", icon: "keyboard") {
+            Toggle("启用全局快捷键", isOn: $hotkeyEnabled)
+                .toggleStyle(.switch)
+
+            Button {
+                if isCapturingHotkey {
+                    stopHotkeyCapture()
+                } else {
+                    startHotkeyCapture()
+                }
+            } label: {
+                hotkeyCaptureLabelContent(
+                    title: "激活按键",
+                    displayText: isCapturingHotkey ? "请直接按下快捷键..." : hotkeyDescription,
+                    isCapturing: isCapturingHotkey
+                )
+            }
+            .buttonStyle(.plain)
+
+            Text(hotkeyCaptureHint)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text("推荐热键：F6 / F7 / F8（如键盘需要可配合 Fn）。按住说话松开结束；双击快捷键进入连续模式，再按一次结束。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            HStack {
+                Text("运行状态:")
+                Spacer()
+                Text(hotkeyRuntimeStatus)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+
+        // 输入风格
+        SettingsSection(title: "输入风格", icon: "wand.and.stars") {
+            VStack(spacing: 8) {
+                ForEach(styles, id: \.id) { style in
+                    StyleButton(
+                        id: style.id,
+                        name: style.name,
+                        icon: style.icon,
+                        desc: style.desc,
+                        isSelected: selectedStyle == style.id
+                    ) {
+                        selectedStyle = style.id
+                    }
+                }
+            }
+        }
+
+        // Thinking LLM
+        SettingsSection(title: "Thinking (LLM)", icon: "brain.head.profile") {
+            Toggle("启用 AI 润色", isOn: $llmEnabled)
+                .toggleStyle(.switch)
+
+            HStack {
+                Text("当前模型")
+                Spacer()
+                Text(llmModel.isEmpty ? "未设置" : llmModel)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            DisclosureGroup("高级设置", isExpanded: $showAdvancedLLM) {
+                VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("API Base URL")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        TextField("https://oneapi.gemiaude.com/v1", text: $llmAPIBaseURL)
+                            .textFieldStyle(.roundedBorder)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("API Key")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        SecureField("Bearer token (>=10 chars)", text: $llmAPIKey)
+                            .textFieldStyle(.roundedBorder)
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("模型")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        TextField("gemini-2.5-flash-lite", text: $llmModel)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                }
+                .padding(.top, 8)
+            }
+        }
+
+        // 自定义改写提示词
+        SettingsSection(title: "自定义改写提示词", icon: "text.quote") {
+            promptStatusLabel(isEmpty: customRewritePrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+            DisclosureGroup("编辑提示词") {
+                VStack(alignment: .leading, spacing: 8) {
+                    TextEditor(text: $customRewritePrompt)
+                        .font(.system(.body, design: .monospaced))
+                        .frame(minHeight: 120)
+                        .border(Color.secondary.opacity(0.3), width: 1)
+
+                    HStack(spacing: 8) {
+                        Button("恢复默认") {
+                            customRewritePrompt = ""
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+
+                        Button("查看当前默认") {
+                            customRewritePrompt = PolishClient.defaultSystemPrompt(for: selectedStyle)
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+
+                    Text("清空后自动使用内置默认提示词。填入自定义内容后将替代默认提示词进行改写。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 8)
+            }
+        }
+    }
+
+    // MARK: - Tab: Voice Agent
+
+    @ViewBuilder
+    private var voiceAgentContent: some View {
+        // 语音终端快捷键
+        SettingsSection(title: "语音终端快捷键", icon: "terminal") {
+            Toggle("启用语音终端", isOn: $terminalHotkeyEnabled)
+                .toggleStyle(.switch)
+
+            Button {
+                if isCapturingTerminalHotkey {
+                    stopTerminalHotkeyCapture()
+                } else {
+                    startTerminalHotkeyCapture()
+                }
+            } label: {
+                hotkeyCaptureLabelContent(
+                    title: "终端激活按键",
+                    displayText: isCapturingTerminalHotkey ? "请直接按下快捷键..." : terminalHotkeyDescription,
+                    isCapturing: isCapturingTerminalHotkey
+                )
+            }
+            .buttonStyle(.plain)
+
+            Text(terminalHotkeyCaptureHint)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+
+        // 功能说明
+        SettingsSection(title: "功能说明", icon: "info.circle") {
+            Text("按住快捷键说话，松开后 AI 识别意图并执行。支持的意图类型：")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 6) {
+                featureLine(icon: "calendar", title: "日历事件", desc: "如「添加明天下午3点的会议到日历」")
+                featureLine(icon: "note.text", title: "创建笔记", desc: "如「记一下明天要买牛奶」")
+                featureLine(icon: "app.badge", title: "打开应用", desc: "如「打开Safari」「打开微信」")
+                featureLine(icon: "terminal", title: "执行命令", desc: "如「执行ls」「运行 brew update」")
+            }
+        }
+
+        // 自定义意图识别提示词
+        SettingsSection(title: "自定义意图识别提示词", icon: "text.quote") {
+            promptStatusLabel(isEmpty: customIntentPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+            DisclosureGroup("编辑提示词") {
+                VStack(alignment: .leading, spacing: 8) {
+                    TextEditor(text: $customIntentPrompt)
+                        .font(.system(.body, design: .monospaced))
+                        .frame(minHeight: 120)
+                        .border(Color.secondary.opacity(0.3), width: 1)
+
+                    HStack(spacing: 8) {
+                        Button("恢复默认") {
+                            customIntentPrompt = ""
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+
+                        Button("查看当前默认") {
+                            customIntentPrompt = IntentRecognizer.defaultSystemPrompt
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .font(.caption)
+                        Text("修改意图提示词需要保持 JSON 输出格式不变，否则意图识别将无法正常工作。")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+                }
+                .padding(.top, 8)
+            }
+        }
+    }
+
+    // MARK: - Tab: 通用设置
+
+    @ViewBuilder
+    private var generalContent: some View {
+        // 权限状态（带操作按钮）
+        SettingsSection(title: "权限状态", icon: "lock.shield") {
+            PermissionActionRow(icon: "mic.fill", title: "麦克风", desc: "采集语音输入", granted: micGranted, buttonTitle: micButtonTitle) {
+                requestMicrophone()
+            }
+            PermissionActionRow(icon: "text.bubble", title: "语音识别", desc: "本地实时转写", granted: speechGranted, buttonTitle: speechButtonTitle) {
+                requestSpeech()
+            }
+            PermissionActionRow(icon: "hand.tap", title: "辅助功能", desc: "自动注入文本", granted: accessibilityGranted, buttonTitle: "去系统设置") {
+                requestAccessibility()
+            }
+        }
+
+        // 音频
+        SettingsSection(title: "音频", icon: "speaker.wave.2") {
+            Toggle("语音输入时静音其他音频", isOn: $muteExternalAudioDuringInput)
+                .toggleStyle(.switch)
+            Toggle("交互提示音", isOn: $interactionSoundEnabled)
+                .toggleStyle(.switch)
+            Text("语音终端各阶段播放系统提示音 (聆听/确认/成功/失败)。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+
+        // 应用行为
+        SettingsSection(title: "应用行为", icon: "macwindow") {
+            Toggle("登录时启动应用", isOn: $launchAtLoginEnabled)
+                .toggleStyle(.switch)
+            Toggle("在 Dock 中显示应用", isOn: $showInDockEnabled)
+                .toggleStyle(.switch)
+            if !launchAtLoginMessage.isEmpty {
+                Text(launchAtLoginMessage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+
+        // 隐私与历史
+        SettingsSection(title: "隐私与历史", icon: "clock.arrow.trianglehead.counterclockwise.rotate.90") {
+            Toggle("保存历史记录（最多 100 条）", isOn: $saveHistoryEnabled)
+                .toggleStyle(.switch)
+            HStack {
+                Button("清空历史记录") {
+                    InputHistoryStore.shared.clear()
+                }
+                .buttonStyle(.bordered)
+
+                Text("仅清空本地记录")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+
+        // 权限诊断
+        SettingsSection(title: "权限诊断", icon: "stethoscope") {
+            VStack(alignment: .leading, spacing: 8) {
+                DiagnosticRow(title: "Bundle ID", value: diagnostics.bundleID)
+                DiagnosticRow(title: "可执行路径", value: diagnostics.executablePath)
+                DiagnosticRow(title: "路径稳定性", value: diagnostics.inApplications ? "已固定 (/Applications)" : "临时路径 (建议安装到 /Applications)")
+                DiagnosticRow(title: "AX API", value: diagnostics.accessibilityAXAPI ? "已授权" : "未授权")
+                DiagnosticRow(title: "TCC 数据库", value: diagnostics.accessibilityTCC ? "已授权" : "未授权")
+                DiagnosticRow(title: "语音识别", value: diagnostics.speechAuthorized ? "已授权" : "未授权")
+                DiagnosticRow(title: "麦克风", value: diagnostics.microphoneAuthorized ? "已授权" : "未授权")
+                HStack {
+                    Button("刷新诊断") {
+                        diagnostics = PermissionDiagnostics.snapshot()
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+
+                    if !diagnostics.inApplications {
+                        Text("建议使用 /Applications/VoiceInput.app 启动")
+                            .font(.caption)
+                            .foregroundStyle(.orange)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Shared UI Helpers
+
+    @ViewBuilder
+    private func hotkeyCaptureLabelContent(title: String, displayText: String, isCapturing: Bool) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(displayText)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.primary)
+            }
+            Spacer()
+            Image(systemName: isCapturing ? "keyboard.badge.ellipsis" : "keyboard")
+                .foregroundStyle(Color.accentColor)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.secondary.opacity(0.12))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(isCapturing ? Color.accentColor : Color.clear, lineWidth: 1.5)
+        )
+    }
+
+    @ViewBuilder
+    private func promptStatusLabel(isEmpty: Bool) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(isEmpty ? Color.green : Color.orange)
+                .frame(width: 8, height: 8)
+            Text(isEmpty ? "使用默认提示词" : "已自定义")
+                .font(.caption)
+                .foregroundStyle(isEmpty ? .green : .orange)
+        }
+    }
+
+    @ViewBuilder
+    private func featureLine(icon: String, title: String, desc: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 20)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.subheadline.weight(.semibold))
+                Text(desc).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+    }
+
+    // MARK: - Permission Actions
+
+    private var micButtonTitle: String {
+        AVCaptureDevice.authorizationStatus(for: .audio) == .denied ? "去系统设置" : "授权"
+    }
+
+    private var speechButtonTitle: String {
+        SFSpeechRecognizer.authorizationStatus() == .denied ? "去系统设置" : "授权"
+    }
+
+    private func requestMicrophone() {
+        if AVCaptureDevice.authorizationStatus(for: .audio) == .denied {
+            openPrivacySettings("Privacy_Microphone")
+        } else {
+            AVCaptureDevice.requestAccess(for: .audio) { granted in
+                DispatchQueue.main.async { micGranted = granted }
+            }
+        }
+    }
+
+    private func requestSpeech() {
+        if SFSpeechRecognizer.authorizationStatus() == .denied {
+            openPrivacySettings("Privacy_SpeechRecognition")
+        } else {
+            SFSpeechRecognizer.requestAuthorization { status in
+                DispatchQueue.main.async { speechGranted = (status == .authorized) }
+            }
+        }
+    }
+
+    private func requestAccessibility() {
+        _ = AccessibilityTrust.isTrusted(prompt: true)
+        if !AccessibilityTrust.isTrusted(prompt: false) {
+            let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    private func openPrivacySettings(_ anchor: String) {
+        let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?\(anchor)")!
         NSWorkspace.shared.open(url)
     }
+
+    private func refreshPermissions() {
+        micGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
+        speechGranted = SFSpeechRecognizer.authorizationStatus() == .authorized
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false] as CFDictionary
+        accessibilityGranted = AXIsProcessTrustedWithOptions(options)
+    }
+
+    // MARK: - Settings Sync
 
     private func openSystemPreferences() {
         let url = URL(string: "x-apple.systempreferences:")!
@@ -438,6 +603,8 @@ struct SettingsView: View {
         launchAtLoginEnabled = defaults.object(forKey: SharedSettings.Keys.launchAtLoginEnabled) as? Bool ?? false
         showInDockEnabled = defaults.object(forKey: SharedSettings.Keys.showInDockEnabled) as? Bool ?? true
         hotkeyRuntimeStatus = defaults.string(forKey: SharedSettings.Keys.hotkeyRuntimeStatus) ?? "等待注册"
+        customRewritePrompt = defaults.string(forKey: SharedSettings.Keys.customRewritePrompt) ?? ""
+        customIntentPrompt = defaults.string(forKey: SharedSettings.Keys.customIntentPrompt) ?? ""
         sanitizeHotkeyIfNeeded()
     }
 
@@ -460,6 +627,8 @@ struct SettingsView: View {
         defaults.set(interactionSoundEnabled, forKey: SharedSettings.Keys.interactionSoundEnabled)
         defaults.set(launchAtLoginEnabled, forKey: SharedSettings.Keys.launchAtLoginEnabled)
         defaults.set(showInDockEnabled, forKey: SharedSettings.Keys.showInDockEnabled)
+        defaults.set(customRewritePrompt, forKey: SharedSettings.Keys.customRewritePrompt)
+        defaults.set(customIntentPrompt, forKey: SharedSettings.Keys.customIntentPrompt)
         DistributedNotificationCenter.default().postNotificationName(
             Notification.Name(SharedNotifications.hotkeyChanged),
             object: nil,
@@ -483,6 +652,8 @@ struct SettingsView: View {
             hotkeyRuntimeStatus = status
         }
     }
+
+    // MARK: - Hotkey Capture
 
     private func startHotkeyCapture() {
         stopHotkeyCapture()
@@ -561,7 +732,6 @@ struct SettingsView: View {
             localTerminalKeyMonitor = nil
         }
     }
-
 }
 
 // MARK: - 设置区块
@@ -582,113 +752,6 @@ struct SettingsSection<Content: View>: View {
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-// MARK: - 使用说明行
-struct UsageRow: View {
-    let icon: String
-    let text: String
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.body)
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 20)
-            Text(text)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-    }
-}
-
-// MARK: - 权限状态行
-struct PermissionStatusRow: View {
-    @State private var micGranted = false
-    @State private var speechGranted = false
-    @State private var accessibilityGranted = false
-
-    var body: some View {
-        VStack(spacing: 8) {
-            PermissionStatusItem(
-                icon: "mic.fill",
-                title: "麦克风",
-                isGranted: micGranted
-            )
-            PermissionStatusItem(
-                icon: "text.bubble",
-                title: "语音识别",
-                isGranted: speechGranted
-            )
-            PermissionStatusItem(
-                icon: "hand.tap",
-                title: "辅助功能",
-                isGranted: accessibilityGranted
-            )
-        }
-        .onAppear {
-            refreshStatus()
-            startPermissionPolling()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            refreshStatus()
-            startPermissionPolling()
-        }
-    }
-
-    // 使用 Timer 持续轮询权限状态
-    private func startPermissionPolling() {
-        var count = 0
-        let maxChecks = 20
-
-        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
-            self.refreshStatus()
-            count += 1
-            if count >= maxChecks || self.accessibilityGranted {
-                timer.invalidate()
-            }
-        }
-    }
-
-    // 旧方法保留用于手动刷新
-    private func schedulePermissionRefresh() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.refreshStatus()
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            self.refreshStatus()
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-            self.refreshStatus()
-        }
-    }
-
-    private func refreshStatus() {
-        micGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
-        speechGranted = SFSpeechRecognizer.authorizationStatus() == .authorized
-
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: false] as CFDictionary
-        accessibilityGranted = AXIsProcessTrustedWithOptions(options)
-    }
-}
-
-struct PermissionStatusItem: View {
-    let icon: String
-    let title: String
-    let isGranted: Bool
-
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .foregroundStyle(isGranted ? .green : .orange)
-                .frame(width: 20)
-            Text(title)
-                .font(.subheadline)
-            Spacer()
-            Image(systemName: isGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
-                .foregroundStyle(isGranted ? .green : .red)
-        }
     }
 }
 

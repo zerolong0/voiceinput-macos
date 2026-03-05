@@ -38,6 +38,7 @@ targets:
         COMBINE_HIDPI_IMAGES: "YES"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: "NO"
+        CODE_SIGN_ENTITLEMENTS: Sources/App/VoiceInput.entitlements
         LD_RUNPATH_SEARCH_PATHS:
           - "$(inherited)"
           - "@executable_path/../Frameworks"
@@ -54,6 +55,8 @@ targets:
           - "Carbon"
           - "-framework"
           - "EventKit"
+          - "-framework"
+          - "CoreAudio"
 
   # 输入法 - 语音输入
   VoiceInputIM:
@@ -91,6 +94,7 @@ targets:
           - "AVFoundation"
         COMBINE_HIDPI_IMAGES: "YES"
         GENERATE_INFOPLIST_FILE: "NO"
+        CODE_SIGN_ENTITLEMENTS: Sources/IM/VoiceInputIM.entitlements
 
 schemes:
   VoiceInput:

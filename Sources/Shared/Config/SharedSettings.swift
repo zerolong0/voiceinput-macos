@@ -27,6 +27,8 @@ enum SharedSettings {
         static let terminalHotkeyEnabled = "terminalHotkeyEnabled"
         static let terminalHotkeyModifiers = "terminalHotkeyModifiers"
         static let terminalHotkeyKeyCode = "terminalHotkeyKeyCode"
+        static let customRewritePrompt = "customRewritePrompt"
+        static let customIntentPrompt = "customIntentPrompt"
     }
 
     static func bootstrapDefaults() {
@@ -92,6 +94,12 @@ enum SharedSettings {
         }
         if defaults.object(forKey: Keys.terminalHotkeyKeyCode) == nil {
             defaults.set(49, forKey: Keys.terminalHotkeyKeyCode)
+        }
+        if defaults.string(forKey: Keys.customRewritePrompt) == nil {
+            defaults.set("", forKey: Keys.customRewritePrompt)
+        }
+        if defaults.string(forKey: Keys.customIntentPrompt) == nil {
+            defaults.set("", forKey: Keys.customIntentPrompt)
         }
     }
 }
