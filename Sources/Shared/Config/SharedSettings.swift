@@ -103,13 +103,13 @@ enum SharedSettings {
             defaults.set(true, forKey: Keys.showInDockEnabled)
         }
         if defaults.object(forKey: Keys.terminalHotkeyEnabled) == nil {
-            defaults.set(false, forKey: Keys.terminalHotkeyEnabled)
+            defaults.set(true, forKey: Keys.terminalHotkeyEnabled)
         }
         if defaults.object(forKey: Keys.terminalHotkeyModifiers) == nil {
-            defaults.set(4096, forKey: Keys.terminalHotkeyModifiers)
+            defaults.set(HotkeyConfig.defaultTerminalModifiers, forKey: Keys.terminalHotkeyModifiers)
         }
         if defaults.object(forKey: Keys.terminalHotkeyKeyCode) == nil {
-            defaults.set(49, forKey: Keys.terminalHotkeyKeyCode)
+            defaults.set(HotkeyConfig.defaultTerminalKeyCode, forKey: Keys.terminalHotkeyKeyCode)
         }
         if defaults.string(forKey: Keys.customRewritePrompt) == nil {
             defaults.set("", forKey: Keys.customRewritePrompt)

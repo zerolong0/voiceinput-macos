@@ -15,8 +15,10 @@ struct HotkeyKeyOption: Identifiable {
 }
 
 enum HotkeyConfig {
-    static let defaultModifiers = 0
-    static let defaultKeyCode = 97
+    static let defaultModifiers = optionKey
+    static let defaultKeyCode = 18
+    static let defaultTerminalModifiers = optionKey
+    static let defaultTerminalKeyCode = 19
 
     static let modifierOptions: [HotkeyModifierOption] = [
         HotkeyModifierOption(id: "option", title: "Option", carbonFlags: optionKey),

@@ -40,7 +40,6 @@ class VoiceInputController: IMKInputController {
     private let whisperEngine = WhisperEngine()
     private let textProcessor = TextProcessor()
     private let polishClient = PolishClient()
-    private let statusPanel = InputStatusPanel()
 
     private struct PendingCopyContext {
         let originalText: String
@@ -58,9 +57,6 @@ class VoiceInputController: IMKInputController {
         SharedSettings.bootstrapDefaults()
         whisperEngine.delegate = self
         try? whisperEngine.loadModel(from: "")
-        statusPanel.onCopyRequested = { [weak self] in
-            self?.copyPendingTextToClipboard()
-        }
         DistributedNotificationCenter.default().addObserver(
             self,
             selector: #selector(reloadHotkeyConfiguration),
@@ -239,14 +235,14 @@ class VoiceInputController: IMKInputController {
         didAttemptRecognitionRecovery = false
         currentText = ""
         pendingCopyContext = nil
-        statusPanel.showListening(text: "")
+        showListeningOverlay(text: "")
 
         do {
             try whisperEngine.start()
         } catch {
             NSLog("VoiceInput: start recognition failed: \(error.localizedDescription)")
             isVoiceInputActive = false
-            statusPanel.showError("启动失败：\(error.localizedDescription)")
+            showErrorOverlay("启动失败：\(error.localizedDescription)")
             return
         }
 
@@ -270,7 +266,7 @@ class VoiceInputController: IMKInputController {
 
         // Always run local pipeline first so we have deterministic fallback.
         let localProcessed = textProcessor.process(capturedText)
-        statusPanel.showThinking(text: localProcessed)
+        showThinkingOverlay(text: localProcessed)
 
         guard shouldUseLLM else {
             deliverResult(
@@ -287,7 +283,7 @@ class VoiceInputController: IMKInputController {
         let baseURL = SharedSettings.defaults.string(forKey: SharedSettings.Keys.llmAPIBaseURL) ?? "https://oneapi.gemiaude.com/v1"
         let apiKey = SharedSettings.defaults.string(forKey: SharedSettings.Keys.llmAPIKey) ?? ""
         let model = SharedSettings.defaults.string(forKey: SharedSettings.Keys.voiceInputModel) ?? "gemini-2.5-flash-lite"
-        statusPanel.showThinking(text: localProcessed)
+        showThinkingOverlay(text: localProcessed)
 
         Task {
             do {
@@ -330,7 +326,7 @@ class VoiceInputController: IMKInputController {
         note: String
     ) {
         if insertText(finalText) {
-            statusPanel.hide()
+            hideOverlay()
             InputHistoryStore.shared.append(
                 InputHistoryItem(
                     originalText: originalText,
@@ -351,19 +347,15 @@ class VoiceInputController: IMKInputController {
             finalText: finalText,
             style: style
         )
-        statusPanel.update(
-            status: "未检测到输入焦点。请点击“复制内容”后手动粘贴，避免消息丢失。",
-            text: finalText,
-            showCopy: true
-        )
+        copyPendingTextToClipboard()
         InputHistoryStore.shared.append(
             InputHistoryItem(
                 originalText: originalText,
                 processedText: processedText,
                 finalText: finalText,
                 style: style,
-                status: .pendingCopy,
-                note: note + "|no_focus"
+                status: .copied,
+                note: note + "|im_auto_copy"
             )
         )
     }
@@ -396,7 +388,7 @@ class VoiceInputController: IMKInputController {
         NSLog("VoiceInput: Server deactivated")
 
         candidateWindow?.hide()
-        statusPanel.hide()
+        hideOverlay()
         isVoiceInputActive = false
         whisperEngine.stop()
     }
@@ -423,7 +415,7 @@ class VoiceInputController: IMKInputController {
                 currentText = ""
                 isVoiceInputActive = false
                 candidateWindow?.hide()
-                statusPanel.hide()
+                hideOverlay()
                 return true
             }
         }
@@ -538,7 +530,6 @@ class VoiceInputController: IMKInputController {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(context.finalText, forType: .string)
-        statusPanel.update(status: "内容已复制。请回到目标输入框粘贴。", text: context.finalText, showCopy: true)
         InputHistoryStore.shared.append(
             InputHistoryItem(
                 originalText: context.originalText,
@@ -582,7 +573,7 @@ extension VoiceInputController: WhisperEngineDelegate {
 
     func whisperEngine(_ engine: WhisperEngine, didUpdatePartialResult text: String) {
         currentText = text
-        statusPanel.showListening(text: text)
+        showListeningOverlay(text: text)
     }
 
     func whisperEngine(_ engine: WhisperEngine, didFailWithError error: WhisperError) {
@@ -593,17 +584,30 @@ extension VoiceInputController: WhisperEngineDelegate {
             do {
                 try whisperEngine.start()
                 currentText = preservedText
-                statusPanel.showListening(text: preservedText)
+                showListeningOverlay(text: preservedText)
                 return
             } catch {
                 isVoiceInputActive = false
                 candidateWindow?.hide()
-                statusPanel.showError("识别失败：自动恢复失败：\(error.localizedDescription)")
+                showErrorOverlay("识别失败：自动恢复失败：\(error.localizedDescription)")
                 return
             }
         }
         isVoiceInputActive = false
         candidateWindow?.hide()
-        statusPanel.showError("识别失败：\(error.localizedDescription)")
+        showErrorOverlay("识别失败：\(error.localizedDescription)")
     }
+}
+
+private extension VoiceInputController {
+    // The floating HUD belongs to AppHotkeyVoiceService only. IM mode stays
+    // on the candidate window / host app surface to avoid cross-mode overlay
+    // contamination and stale panel content.
+    func showListeningOverlay(text: String) {}
+
+    func showThinkingOverlay(text: String) {}
+
+    func showErrorOverlay(_ text: String) {}
+
+    func hideOverlay() {}
 }

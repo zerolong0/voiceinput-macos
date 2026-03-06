@@ -23,11 +23,14 @@ final class AppHotkeyVoiceService: NSObject {
     private var hotkeyHandlerInstalled = false
     private var keyConsumeTap: CFMachPort?
     private var keyConsumeTapSource: CFRunLoopSource?
+    private var globalKeyMonitor: Any?
+    private var localKeyMonitor: Any?
     private var activeHotkeyModifiers: UInt32 = UInt32(OptionSetFlag.optionSpaceModifiers.rawValue)
     private var activeHotkeyKeyCode: UInt32 = UInt32(OptionSetFlag.spaceKeyCode.rawValue)
     private var activeTerminalHotkeyModifiers: UInt32 = UInt32(controlKey)
     private var activeTerminalHotkeyKeyCode: UInt32 = 49
     private var eventTapHandlesHotkeys = true
+    private var keyTapAvailable = false
     private var isVoiceInputActive = false
     private var isContinuousMode = false
     private var currentText = ""
@@ -148,7 +151,7 @@ final class AppHotkeyVoiceService: NSObject {
             keyCode = HotkeyConfig.defaultKeyCode
             defaults.set(modifiers, forKey: SharedSettings.Keys.hotkeyModifiers)
             defaults.set(keyCode, forKey: SharedSettings.Keys.hotkeyKeyCode)
-            updateHotkeyRuntimeStatus("检测到冲突组合，已回退为 F6")
+            updateHotkeyRuntimeStatus("检测到冲突组合，已回退为 Option + 1")
         }
 
         let primaryStatus = registerHotkey(
@@ -161,6 +164,7 @@ final class AppHotkeyVoiceService: NSObject {
             activeHotkeyKeyCode = UInt32(keyCode)
             activeHotkeyModifiers = UInt32(modifiers)
             setupKeyConsumeTap()
+            setupKeyEventMonitors()
             updateHotkeyRuntimeStatus("已注册: \(formattedHotkey(modifiers: modifiers, keyCode: keyCode))")
             registerTerminalHotkeyIfEnabled()
             return
@@ -182,7 +186,8 @@ final class AppHotkeyVoiceService: NSObject {
             activeHotkeyKeyCode = UInt32(fallbackKeyCode)
             activeHotkeyModifiers = UInt32(fallbackModifiers)
             setupKeyConsumeTap()
-            updateHotkeyRuntimeStatus("原组合注册失败，已回退为 F6")
+            setupKeyEventMonitors()
+            updateHotkeyRuntimeStatus("原组合注册失败，已回退为 Option + 1")
             registerTerminalHotkeyIfEnabled()
             return
         }
@@ -191,6 +196,7 @@ final class AppHotkeyVoiceService: NSObject {
         activeHotkeyKeyCode = UInt32(keyCode)
         activeHotkeyModifiers = UInt32(modifiers)
         setupKeyConsumeTap()
+        setupKeyEventMonitors()
         registerTerminalHotkeyIfEnabled()
     }
 
@@ -204,8 +210,8 @@ final class AppHotkeyVoiceService: NSObject {
         let enabled = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyEnabled) as? Bool ?? false
         guard enabled else { return }
 
-        let modifiers = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyModifiers) as? Int ?? controlKey
-        let keyCode = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyKeyCode) as? Int ?? 49
+        let modifiers = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyModifiers) as? Int ?? HotkeyConfig.defaultTerminalModifiers
+        let keyCode = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyKeyCode) as? Int ?? HotkeyConfig.defaultTerminalKeyCode
         activeTerminalHotkeyModifiers = UInt32(modifiers)
         activeTerminalHotkeyKeyCode = UInt32(keyCode)
 
@@ -316,10 +322,12 @@ final class AppHotkeyVoiceService: NSObject {
             terminalHotkeyRef = nil
         }
         teardownKeyConsumeTap()
+        teardownKeyEventMonitors()
     }
 
     private func setupKeyConsumeTap() {
         teardownKeyConsumeTap()
+        keyTapAvailable = false
 
         let mask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue)
         let callback: CGEventTapCallBack = { _, type, event, _ in
@@ -337,6 +345,7 @@ final class AppHotkeyVoiceService: NSObject {
             callback: callback,
             userInfo: nil
         ) else {
+            logger.error("CGEvent tap unavailable; falling back to NSEvent monitors")
             return
         }
 
@@ -347,6 +356,7 @@ final class AppHotkeyVoiceService: NSObject {
 
         keyConsumeTap = tap
         keyConsumeTapSource = source
+        keyTapAvailable = true
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
     }
@@ -360,6 +370,71 @@ final class AppHotkeyVoiceService: NSObject {
             CFMachPortInvalidate(tap)
             keyConsumeTap = nil
         }
+        keyTapAvailable = false
+    }
+
+    private func setupKeyEventMonitors() {
+        teardownKeyEventMonitors()
+
+        let handler: (NSEvent) -> Void = { [weak self] event in
+            self?.handleMonitoredKeyEvent(event)
+        }
+
+        globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown, .keyUp], handler: handler)
+        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] event in
+            self?.handleMonitoredKeyEvent(event)
+            return event
+        }
+    }
+
+    private func teardownKeyEventMonitors() {
+        if let monitor = globalKeyMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalKeyMonitor = nil
+        }
+        if let monitor = localKeyMonitor {
+            NSEvent.removeMonitor(monitor)
+            localKeyMonitor = nil
+        }
+    }
+
+    private func handleMonitoredKeyEvent(_ event: NSEvent) {
+        guard shouldUseMonitorFallback(for: event) else { return }
+
+        if matchesHotkey(event, keyCode: activeHotkeyKeyCode, modifiers: activeHotkeyModifiers) {
+            if event.type == .keyDown {
+                handleHotkeyPressed()
+            } else if event.type == .keyUp {
+                handleHotkeyReleased()
+            }
+            return
+        }
+
+        let terminalEnabled = SharedSettings.defaults.object(forKey: SharedSettings.Keys.terminalHotkeyEnabled) as? Bool ?? false
+        guard terminalEnabled else { return }
+        guard matchesHotkey(event, keyCode: activeTerminalHotkeyKeyCode, modifiers: activeTerminalHotkeyModifiers) else { return }
+
+        if event.type == .keyDown {
+            VoiceTerminalService.shared.handleHotkeyPressed()
+        } else if event.type == .keyUp {
+            VoiceTerminalService.shared.handleHotkeyReleased()
+        }
+    }
+
+    private func shouldUseMonitorFallback(for event: NSEvent) -> Bool {
+        guard event.type == .keyDown || event.type == .keyUp else { return false }
+        if !keyTapAvailable { return true }
+        return activeHotkeyModifiers == 0 || activeTerminalHotkeyModifiers == 0
+    }
+
+    private func matchesHotkey(_ event: NSEvent, keyCode: UInt32, modifiers: UInt32) -> Bool {
+        let mask = UInt32(optionKey | cmdKey | controlKey | shiftKey)
+        let currentModifiers = UInt32(
+            HotkeyConfig.carbonFlags(
+                from: event.modifierFlags.intersection([.option, .command, .control, .shift])
+            )
+        )
+        return UInt32(event.keyCode) == keyCode && (currentModifiers & mask) == (modifiers & mask)
     }
 
     private func handleKeyConsumeTap(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {

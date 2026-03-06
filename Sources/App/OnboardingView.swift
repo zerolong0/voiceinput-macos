@@ -28,7 +28,7 @@ struct OnboardingView: View {
     @State private var speechGranted = false
     @State private var accessibilityGranted = false
     @State private var selectedStyle = "default"
-    @State private var hotkeyText = "Option + 0"
+    @State private var hotkeyText = "Option + 1"
     @State private var isCapturingHotkey = false
     @State private var hotkeyCaptureHint = "点击下方快捷键框后，直接按键盘录入"
     @State private var localKeyMonitor: Any?
@@ -202,7 +202,7 @@ struct OnboardingView: View {
 
     private var hotkeyPage: some View {
         OnboardingCard {
-            Text("快捷键支持单键和双键组合。推荐 F6/F7/F8（如键盘需要可配合 Fn 使用），或组合键 Option + 0。双击快捷键可进入连续模式，再按一次结束。")
+            Text("默认热键是 Option + 1，用于语音输入。Voice Agent 默认使用 Option + 2。快捷键仍支持单键和双键组合，用户后续可以自行修改。双击快捷键可进入连续模式，再按一次结束。")
                 .foregroundStyle(.secondary)
 
             Button {
@@ -243,12 +243,12 @@ struct OnboardingView: View {
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 10) {
-                Button("推荐单键（F6 / Fn+F6）") {
+                Button("推荐默认（Option + 1）") {
                     SharedSettings.defaults.set(true, forKey: SharedSettings.Keys.hotkeyEnabled)
-                    SharedSettings.defaults.set(0, forKey: SharedSettings.Keys.hotkeyModifiers)
-                    SharedSettings.defaults.set(97, forKey: SharedSettings.Keys.hotkeyKeyCode)
-                    hotkeyText = "F6"
-                    hotkeyCaptureHint = "已设置推荐单键：F6"
+                    SharedSettings.defaults.set(HotkeyConfig.defaultModifiers, forKey: SharedSettings.Keys.hotkeyModifiers)
+                    SharedSettings.defaults.set(HotkeyConfig.defaultKeyCode, forKey: SharedSettings.Keys.hotkeyKeyCode)
+                    hotkeyText = "Option + 1"
+                    hotkeyCaptureHint = "已设置默认热键：Option + 1"
                     DistributedNotificationCenter.default().postNotificationName(
                         Notification.Name(SharedNotifications.hotkeyChanged),
                         object: nil,
@@ -258,12 +258,12 @@ struct OnboardingView: View {
                 }
                 .buttonStyle(.bordered)
 
-                Button("推荐组合（Option + 0）") {
+                Button("示例单键（保留支持）") {
                     SharedSettings.defaults.set(true, forKey: SharedSettings.Keys.hotkeyEnabled)
-                    SharedSettings.defaults.set(2048, forKey: SharedSettings.Keys.hotkeyModifiers)
-                    SharedSettings.defaults.set(29, forKey: SharedSettings.Keys.hotkeyKeyCode)
-                    hotkeyText = "Option + 0"
-                    hotkeyCaptureHint = "已设置推荐组合：Option + 0"
+                    SharedSettings.defaults.set(0, forKey: SharedSettings.Keys.hotkeyModifiers)
+                    SharedSettings.defaults.set(97, forKey: SharedSettings.Keys.hotkeyKeyCode)
+                    hotkeyText = "F6"
+                    hotkeyCaptureHint = "已设置示例单键：F6"
                     DistributedNotificationCenter.default().postNotificationName(
                         Notification.Name(SharedNotifications.hotkeyChanged),
                         object: nil,

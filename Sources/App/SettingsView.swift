@@ -90,11 +90,11 @@ enum SettingsTab {
 struct SettingsView: View {
     var embedded: Bool = false
     var initialTab: SettingsTab = .voiceInput
-    @AppStorage("selectedStyle") private var selectedStyle = "default"
-    @AppStorage("hotkeyEnabled") private var hotkeyEnabled = true
-    @AppStorage("hotkeyModifiers") private var hotkeyModifiers = HotkeyConfig.defaultModifiers
-    @AppStorage("hotkeyKeyCode") private var hotkeyKeyCode = HotkeyConfig.defaultKeyCode
-    @AppStorage("hotkeyHoldToStopThreshold") private var hotkeyHoldToStopThreshold = 0.35
+    @AppStorage("selectedStyle", store: SharedSettings.defaults) private var selectedStyle = "default"
+    @AppStorage("hotkeyEnabled", store: SharedSettings.defaults) private var hotkeyEnabled = true
+    @AppStorage("hotkeyModifiers", store: SharedSettings.defaults) private var hotkeyModifiers = HotkeyConfig.defaultModifiers
+    @AppStorage("hotkeyKeyCode", store: SharedSettings.defaults) private var hotkeyKeyCode = HotkeyConfig.defaultKeyCode
+    @AppStorage("hotkeyHoldToStopThreshold", store: SharedSettings.defaults) private var hotkeyHoldToStopThreshold = 0.35
 
     @State private var llmEnabled = false
     @State private var llmAPIBaseURL = "https://oneapi.gemiaude.com/v1"
@@ -110,9 +110,9 @@ struct SettingsView: View {
     @State private var interactionSoundEnabled = true
     @State private var launchAtLoginEnabled = false
     @State private var showInDockEnabled = true
-    @State private var terminalHotkeyEnabled = false
-    @State private var terminalHotkeyModifiers = 4096
-    @State private var terminalHotkeyKeyCode = 49
+    @State private var terminalHotkeyEnabled = true
+    @State private var terminalHotkeyModifiers = HotkeyConfig.defaultTerminalModifiers
+    @State private var terminalHotkeyKeyCode = HotkeyConfig.defaultTerminalKeyCode
     @State private var isCapturingTerminalHotkey = false
     @State private var terminalHotkeyCaptureHint = "点击快捷键框后直接按键盘录入"
     @State private var localTerminalKeyMonitor: Any?
@@ -306,7 +306,7 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text("推荐热键：F6 / F7 / F8（如键盘需要可配合 Fn）。按住说话松开结束；双击快捷键进入连续模式，再按一次结束。")
+            Text("默认热键：Option + 1 用于语音输入，Option + 2 用于 Voice Agent。仍然支持单键热键，用户可自行修改。按住说话松开结束；双击快捷键进入连续模式，再按一次结束。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -743,9 +743,9 @@ struct SettingsView: View {
         hotkeyModifiers = defaults.object(forKey: SharedSettings.Keys.hotkeyModifiers) as? Int ?? hotkeyModifiers
         hotkeyKeyCode = defaults.object(forKey: SharedSettings.Keys.hotkeyKeyCode) as? Int ?? hotkeyKeyCode
         hotkeyHoldToStopThreshold = defaults.object(forKey: SharedSettings.Keys.hotkeyHoldToStopThreshold) as? Double ?? hotkeyHoldToStopThreshold
-        terminalHotkeyEnabled = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyEnabled) as? Bool ?? false
-        terminalHotkeyModifiers = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyModifiers) as? Int ?? 4096
-        terminalHotkeyKeyCode = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyKeyCode) as? Int ?? 49
+        terminalHotkeyEnabled = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyEnabled) as? Bool ?? true
+        terminalHotkeyModifiers = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyModifiers) as? Int ?? HotkeyConfig.defaultTerminalModifiers
+        terminalHotkeyKeyCode = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyKeyCode) as? Int ?? HotkeyConfig.defaultTerminalKeyCode
         llmEnabled = defaults.object(forKey: SharedSettings.Keys.llmEnabled) as? Bool ?? false
         llmAPIBaseURL = defaults.string(forKey: SharedSettings.Keys.llmAPIBaseURL) ?? llmAPIBaseURL
         llmAPIKey = defaults.string(forKey: SharedSettings.Keys.llmAPIKey) ?? llmAPIKey
@@ -854,7 +854,7 @@ struct SettingsView: View {
         guard !validation.isValid else { return }
         hotkeyModifiers = HotkeyConfig.defaultModifiers
         hotkeyKeyCode = HotkeyConfig.defaultKeyCode
-        hotkeyCaptureHint = "检测到冲突快捷键，已回退为 F6"
+        hotkeyCaptureHint = "检测到冲突快捷键，已回退为 Option + 1"
         syncToSharedDefaults()
     }
 

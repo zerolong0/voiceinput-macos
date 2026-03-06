@@ -210,8 +210,8 @@ struct VoiceAgentPanelView: View {
     @ObservedObject private var session = VoiceAgentSessionStore.shared
 
     private var currentHotkeyText: String {
-        let modifiers = SharedSettings.defaults.object(forKey: SharedSettings.Keys.terminalHotkeyModifiers) as? Int ?? 4096
-        let keyCode = SharedSettings.defaults.object(forKey: SharedSettings.Keys.terminalHotkeyKeyCode) as? Int ?? 49
+        let modifiers = SharedSettings.defaults.object(forKey: SharedSettings.Keys.terminalHotkeyModifiers) as? Int ?? HotkeyConfig.defaultTerminalModifiers
+        let keyCode = SharedSettings.defaults.object(forKey: SharedSettings.Keys.terminalHotkeyKeyCode) as? Int ?? HotkeyConfig.defaultTerminalKeyCode
         return HotkeyConfig.displayString(modifiers: modifiers, keyCode: keyCode)
     }
 
