@@ -10,6 +10,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow?
     var cancellables = Set<AnyCancellable>()
     private let hotkeyService = AppHotkeyVoiceService.shared
+    private let voiceTerminalService = VoiceTerminalService.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         terminateConflictingVoiceInputInstances()

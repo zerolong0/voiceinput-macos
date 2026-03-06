@@ -38,6 +38,8 @@ final class AppHotkeyVoiceService: NSObject {
     private var stopHandledOnPress = false
     private var pendingStopAfterActivation = false
     private var didAttemptRecognitionRecovery = false
+    private var insertionTargetElement: AXUIElement?
+    private var insertionTargetPID: pid_t?
 
     private let whisperEngine = WhisperEngine()
     private let textProcessor = TextProcessor()
@@ -69,12 +71,36 @@ final class AppHotkeyVoiceService: NSObject {
             object: nil,
             suspensionBehavior: .deliverImmediately
         )
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(handleDebugInjectionRequest(_:)),
+            name: Notification.Name("com.voiceinput.debug.injectText"),
+            object: nil,
+            suspensionBehavior: .deliverImmediately
+        )
     }
 
     deinit {
         whisperEngine.stop()
         unregisterGlobalHotkey()
         DistributedNotificationCenter.default().removeObserver(self)
+    }
+
+    @objc
+    private func handleDebugInjectionRequest(_ notification: Notification) {
+        guard let text = notification.userInfo?["text"] as? String,
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        RuntimeDiagnosticsStore.record("voice-input", "Received debug injection request")
+        captureInsertionTarget()
+        deliverResult(
+            originalText: text,
+            processedText: text,
+            finalText: text,
+            style: effectiveStyle(),
+            note: "debug_injection"
+        )
     }
 
     func start() {
@@ -418,11 +444,13 @@ final class AppHotkeyVoiceService: NSObject {
         let isDoubleTap = lastHotkeyReleaseAt > 0 && (now - lastHotkeyReleaseAt) <= doubleTapWindow
         pendingStopAfterActivation = false
         shouldStartContinuousOnActivation = isDoubleTap
+        captureInsertionTarget()
         statusPanel.showArming()
         RealtimeSessionStore.shared.setStage(.arming, text: "已检测到热键，准备启动语音输入")
         Task { @MainActor in
             let granted = await ensurePreflightPermissions()
             self.logger.notice("Preflight permission result granted=\(granted, privacy: .public)")
+            RuntimeDiagnosticsStore.record("voice-input", "Preflight permissions granted=\(granted)")
             guard granted else { return }
             startRecording(startInContinuousMode: shouldStartContinuousOnActivation)
         }
@@ -455,6 +483,7 @@ final class AppHotkeyVoiceService: NSObject {
     private func startRecording(startInContinuousMode: Bool = false) {
         guard !isVoiceInputActive else { return }
         logger.notice("Starting recording continuous=\(startInContinuousMode, privacy: .public)")
+        RuntimeDiagnosticsStore.record("voice-input", "Starting recording continuous=\(startInContinuousMode)")
         isVoiceInputActive = true
         didAttemptRecognitionRecovery = false
         isContinuousMode = startInContinuousMode
@@ -472,6 +501,7 @@ final class AppHotkeyVoiceService: NSObject {
         do {
             try whisperEngine.start()
             logger.notice("whisperEngine.start succeeded")
+            RuntimeDiagnosticsStore.record("voice-input", "Speech engine started")
             if isContinuousMode {
                 statusPanel.show(status: "连续输入已开启", text: "双击进入连续模式后，可按一次快捷键结束", showCopy: false)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { [weak self] in
@@ -488,6 +518,7 @@ final class AppHotkeyVoiceService: NSObject {
             }
         } catch {
             logger.error("whisperEngine.start failed: \(error.localizedDescription, privacy: .public)")
+            RuntimeDiagnosticsStore.record("voice-input", "Speech engine start failed: \(error.localizedDescription)")
             isVoiceInputActive = false
             isContinuousMode = false
             pendingStopAfterActivation = false
@@ -499,6 +530,7 @@ final class AppHotkeyVoiceService: NSObject {
     private func stopRecordingAndProcess() {
         guard isVoiceInputActive else { return }
         logger.notice("Stopping recording and processing currentTextLength=\(self.currentText.count, privacy: .public)")
+        RuntimeDiagnosticsStore.record("voice-input", "Stopping recording textLength=\(currentText.count)")
         isStoppingRecording = true
         whisperEngine.stop()
         isStoppingRecording = false
@@ -519,6 +551,7 @@ final class AppHotkeyVoiceService: NSObject {
         }
 
         let localProcessed = textProcessor.process(capturedText)
+        RuntimeDiagnosticsStore.record("voice-input", "Captured transcript length=\(capturedText.count)")
         statusPanel.showThinking(text: "改写中")
         RealtimeSessionStore.shared.setStage(.rewriting, text: "改写中")
         RealtimeSessionStore.shared.updateOriginalLiveText(capturedText)
@@ -582,24 +615,85 @@ final class AppHotkeyVoiceService: NSObject {
         note: String
     ) {
         logger.notice("Delivering result finalLength=\(finalText.count, privacy: .public)")
+        RuntimeDiagnosticsStore.record("voice-input", "Deliver result length=\(finalText.count)")
         RealtimeSessionStore.shared.updateRewrittenText(finalText)
-
         if insertTextIntoFocusedApp(finalText) {
-            statusPanel.hide()
-            RealtimeSessionStore.shared.setStage(.inserted, text: "已输入到焦点位置")
-            InputHistoryStore.shared.append(
-                InputHistoryItem(
-                    originalText: originalText,
-                    processedText: processedText,
-                    finalText: finalText,
-                    style: style,
-                    status: .inserted,
-                    note: note
-                )
+            finalizeInsertedResult(
+                originalText: originalText,
+                processedText: processedText,
+                finalText: finalText,
+                style: style,
+                note: note
             )
             return
         }
 
+        // Focus handoff back to the original app can lag slightly after the HUD/LLM phase.
+        if insertionTargetPID != nil {
+            RealtimeSessionStore.shared.setStage(.transcribing, text: "正在写入焦点位置")
+            RuntimeDiagnosticsStore.record("voice-input", "Primary insert missed, retrying delayed insert")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
+                guard let self else { return }
+                if self.insertTextIntoFocusedApp(finalText) {
+                    self.finalizeInsertedResult(
+                        originalText: originalText,
+                        processedText: processedText,
+                        finalText: finalText,
+                        style: style,
+                        note: note + "|delayed_insert"
+                    )
+                } else {
+                    self.finalizePendingCopyResult(
+                        originalText: originalText,
+                        processedText: processedText,
+                        finalText: finalText,
+                        style: style,
+                        note: note
+                    )
+                }
+            }
+            return
+        }
+
+        finalizePendingCopyResult(
+            originalText: originalText,
+            processedText: processedText,
+            finalText: finalText,
+            style: style,
+            note: note
+        )
+    }
+
+    private func finalizeInsertedResult(
+        originalText: String,
+        processedText: String,
+        finalText: String,
+        style: String,
+        note: String
+    ) {
+        clearInsertionTarget()
+        statusPanel.hide()
+        RealtimeSessionStore.shared.setStage(.inserted, text: "已输入到焦点位置")
+        RuntimeDiagnosticsStore.record("voice-input", "Inserted into focused target successfully")
+        InputHistoryStore.shared.append(
+            InputHistoryItem(
+                originalText: originalText,
+                processedText: processedText,
+                finalText: finalText,
+                style: style,
+                status: .inserted,
+                note: note
+            )
+        )
+    }
+
+    private func finalizePendingCopyResult(
+        originalText: String,
+        processedText: String,
+        finalText: String,
+        style: String,
+        note: String
+    ) {
         pendingCopyContext = PendingCopyContext(
             originalText: originalText,
             processedText: processedText,
@@ -607,7 +701,9 @@ final class AppHotkeyVoiceService: NSObject {
             style: style
         )
         statusPanel.showCopyFallback(finalText: finalText)
-        RealtimeSessionStore.shared.setStage(.pendingCopy, text: "无焦点，等待复制")
+        clearInsertionTarget()
+        RealtimeSessionStore.shared.setStage(.pendingCopy, text: "未找到可输入焦点，请复制后粘贴")
+        RuntimeDiagnosticsStore.record("voice-input", "Fell back to copy flow because no usable focus target")
         InputHistoryStore.shared.append(
             InputHistoryItem(
                 originalText: originalText,
@@ -633,25 +729,40 @@ final class AppHotkeyVoiceService: NSObject {
     }
 
     private func insertTextIntoFocusedApp(_ text: String) -> Bool {
-        guard let focused = focusedElement() else {
-            return pasteTextViaCommandV(text)
+        activateInsertionTargetIfNeeded()
+        let axTargets = [focusedElement(), insertionTargetElement].compactMap { $0 }
+        guard !axTargets.isEmpty else {
+            RuntimeDiagnosticsStore.record("voice-input", "No AX target available for insertion")
+            return false
         }
 
-        // Prefer AX direct insertion for editable controls; fallback to pasteboard Cmd+V.
-        if insertTextViaAX(text, into: focused) {
-            return true
+        for target in axTargets {
+            if insertTextViaAX(text, into: target) {
+                RuntimeDiagnosticsStore.record("voice-input", "Inserted via AX path")
+                return true
+            }
+
+            if replaceSelectedTextViaAX(text, into: target) {
+                RuntimeDiagnosticsStore.record("voice-input", "Inserted via AX selected text path")
+                return true
+            }
         }
 
-        return pasteTextViaCommandV(text)
+        guard let activeFocusedTarget = focusedElement() else {
+            RuntimeDiagnosticsStore.record("voice-input", "Paste fallback skipped because focused target disappeared")
+            return false
+        }
+        return pasteTextViaCommandV(text, target: activeFocusedTarget)
     }
 
-    private func pasteTextViaCommandV(_ text: String) -> Bool {
+    private func pasteTextViaCommandV(_ text: String, target: AXUIElement) -> Bool {
+        guard hasUsableInjectionTarget(target) else { return false }
         let pasteboard = NSPasteboard.general
         let original = pasteboard.string(forType: .string)
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
 
-        let source = CGEventSource(stateID: .combinedSessionState)
+        let source = CGEventSource(stateID: .privateState)
         let cmdDown = CGEvent(keyboardEventSource: source, virtualKey: 0x37, keyDown: true)
         let vDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true)
         let vUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false)
@@ -671,6 +782,16 @@ final class AppHotkeyVoiceService: NSObject {
             }
         }
         return true
+    }
+
+    private func replaceSelectedTextViaAX(_ text: String, into element: AXUIElement) -> Bool {
+        let selectedTextAttribute = kAXSelectedTextAttribute as CFString
+        var isSettable = DarwinBoolean(false)
+        let settableStatus = AXUIElementIsAttributeSettable(element, selectedTextAttribute, &isSettable)
+        guard settableStatus == .success, isSettable.boolValue else {
+            return false
+        }
+        return AXUIElementSetAttributeValue(element, selectedTextAttribute, text as CFTypeRef) == .success
     }
 
     private func focusedElement() -> AXUIElement? {
@@ -732,7 +853,59 @@ final class AppHotkeyVoiceService: NSObject {
               let role = roleRef as? String else {
             return false
         }
-        return role == kAXTextAreaRole as String || role == kAXTextFieldRole as String || role == "AXSearchField"
+        let editableRoles: Set<String> = [
+            kAXTextAreaRole as String,
+            kAXTextFieldRole as String,
+            "AXSearchField",
+            "AXComboBox",
+            "AXDocument",
+            "AXWebArea"
+        ]
+        return editableRoles.contains(role)
+    }
+
+    private func captureInsertionTarget() {
+        guard let focused = focusedElement() else {
+            insertionTargetElement = nil
+            insertionTargetPID = nil
+            return
+        }
+
+        insertionTargetElement = focused
+        var pid: pid_t = 0
+        if AXUIElementGetPid(focused, &pid) == .success, pid > 0 {
+            insertionTargetPID = pid
+        } else {
+            insertionTargetPID = nil
+        }
+    }
+
+    private func activateInsertionTargetIfNeeded() {
+        guard let pid = insertionTargetPID,
+              let app = NSWorkspace.shared.runningApplications.first(where: { $0.processIdentifier == pid }),
+              app.bundleIdentifier != Bundle.main.bundleIdentifier else {
+            return
+        }
+        _ = app.activate(options: NSApplication.ActivationOptions.activateIgnoringOtherApps)
+        for _ in 0..<12 {
+            if NSWorkspace.shared.frontmostApplication?.processIdentifier == pid {
+                break
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.03))
+        }
+    }
+
+    private func clearInsertionTarget() {
+        insertionTargetElement = nil
+        insertionTargetPID = nil
+    }
+
+    private func hasUsableInjectionTarget(_ element: AXUIElement) -> Bool {
+        guard let frontmost = NSWorkspace.shared.frontmostApplication,
+              frontmost.bundleIdentifier != Bundle.main.bundleIdentifier else {
+            return false
+        }
+        return isAXEditable(element)
     }
 
     private func copyPendingTextToClipboard() {
@@ -856,6 +1029,7 @@ final class AppHotkeyVoiceService: NSObject {
             prefix = "启动失败"
         }
         statusPanel.showError("\(prefix)：\(message)")
+        RuntimeDiagnosticsStore.record("voice-input", "\(prefix)：\(message)")
         let stageText: String
         switch kind {
         case .permission, .startup, .recognition:

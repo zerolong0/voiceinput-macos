@@ -55,6 +55,7 @@ final class TerminalPanel {
 
     private var autoHideTimer: Timer?
     private(set) var currentState: TerminalPanelState = .idle
+    private var latestTranscript: String = ""
 
     var onConfirm: ((RecognizedIntent) -> Void)?
     var onCancel: (() -> Void)?
@@ -329,24 +330,31 @@ final class TerminalPanel {
             applyCompactLayout()
             startWaveAnimation()
             iconView.isHidden = true
-            titleLabel.stringValue = "开始说话"
+            latestTranscript = ""
+            titleLabel.stringValue = "请开始说话"
             titleLabel.textColor = .labelColor
             hideAllButtons()
-            relayout(width: calculatedWidth(for: "开始说话"), height: 44)
+            relayout(width: calculatedWidth(for: "请开始说话"), height: 44)
             showPanel()
             playSound("Tink")
             installKeyMonitor()
 
         case .recognizing(let text):
-            applyCompactLayout()
+            if !text.isEmpty {
+                latestTranscript = text
+            }
+            let visibleTranscript = visibleTextForListening(text.isEmpty ? latestTranscript : text)
+            applyExpandedLayout()
             stopWaveAnimation()
             iconView.image = NSImage(systemSymbolName: "sparkles", accessibilityDescription: nil)
             iconView.contentTintColor = .controlAccentColor
             iconView.isHidden = false
-            titleLabel.stringValue = text.isEmpty ? "正在理解你的意图" : "正在理解：\(visibleTextForListening(text))"
+            titleLabel.stringValue = "正在理解你的意图"
             titleLabel.textColor = .labelColor
+            subtitleLabel.stringValue = visibleTranscript.isEmpty ? "正在分析你刚才说的话" : visibleTranscript
+            subtitleLabel.isHidden = false
             hideAllButtons()
-            relayout(width: calculatedWidth(for: titleLabel.stringValue), height: 44)
+            relayout(width: 340, height: 88)
             showPanel()
 
         case .autoExecuting(let intent):
@@ -362,8 +370,9 @@ final class TerminalPanel {
             iconView.isHidden = false
             titleLabel.stringValue = previewTitle(for: intent)
             titleLabel.textColor = .labelColor
+            let executionTranscript = visibleTextForListening(latestTranscript)
             if intent.type.riskLevel == .low {
-                subtitleLabel.stringValue = "即将执行，按 Esc 或点取消可中止"
+                subtitleLabel.stringValue = executionTranscript.isEmpty ? "即将执行，按 Esc 或点取消可中止" : executionTranscript
                 subtitleLabel.isHidden = false
                 confirmButton.isHidden = true
                 cancelButton.isHidden = false
@@ -376,7 +385,14 @@ final class TerminalPanel {
                 relayout(width: 340, height: 92)
             } else {
                 hideAllButtons()
-                relayout(width: calculatedWidth(for: titleLabel.stringValue), height: 44)
+                if executionTranscript.isEmpty {
+                    relayout(width: calculatedWidth(for: titleLabel.stringValue), height: 44)
+                } else {
+                    applyExpandedLayout()
+                    subtitleLabel.stringValue = executionTranscript
+                    subtitleLabel.isHidden = false
+                    relayout(width: 340, height: 88)
+                }
             }
             showPanel()
             playSound("Pop")
@@ -391,13 +407,15 @@ final class TerminalPanel {
             iconView.isHidden = false
             titleLabel.stringValue = previewTitle(for: intent)
             titleLabel.textColor = .labelColor
-            subtitleLabel.stringValue = "确认后执行，按 Esc 取消"
+            let confirmTranscript = visibleTextForListening(latestTranscript)
+            subtitleLabel.stringValue = confirmTranscript.isEmpty ? "确认后执行，按 Esc 取消" : confirmTranscript
             subtitleLabel.isHidden = false
             confirmButton.isHidden = false
             cancelButton.isHidden = false
             buttonBar.isHidden = false
             fallbackStack.isHidden = true
             relayout(width: 340, height: 92)
+            showPanel()
             playSound("Pop")
             installKeyMonitor()
 
@@ -407,6 +425,7 @@ final class TerminalPanel {
             startWaveAnimation()
             iconView.isHidden = true
             let visible = visibleTextForListening(text)
+            latestTranscript = text
             titleLabel.stringValue = visible.isEmpty ? "请说“确认”或“取消”" : visible
             titleLabel.textColor = .labelColor
             subtitleLabel.stringValue = previewTitle(for: intent)
@@ -416,9 +435,15 @@ final class TerminalPanel {
             buttonBar.isHidden = false
             fallbackStack.isHidden = true
             relayout(width: 340, height: 92)
+            showPanel()
 
         case .executing(let intent):
-            applyCompactLayout()
+            let executionTranscript = visibleTextForListening(latestTranscript)
+            if executionTranscript.isEmpty {
+                applyCompactLayout()
+            } else {
+                applyExpandedLayout()
+            }
             stopWaveAnimation()
             iconView.image = NSImage(systemSymbolName: "bolt.fill", accessibilityDescription: nil)
             iconView.contentTintColor = .controlAccentColor
@@ -426,7 +451,13 @@ final class TerminalPanel {
             titleLabel.stringValue = executingTitle(for: intent)
             titleLabel.textColor = .labelColor
             hideAllButtons()
-            relayout(width: calculatedWidth(for: titleLabel.stringValue), height: 44)
+            if executionTranscript.isEmpty {
+                relayout(width: calculatedWidth(for: titleLabel.stringValue), height: 44)
+            } else {
+                subtitleLabel.stringValue = executionTranscript
+                subtitleLabel.isHidden = false
+                relayout(width: 340, height: 88)
+            }
             removeKeyMonitor()
             showPanel()
 
@@ -461,6 +492,7 @@ final class TerminalPanel {
             hideAllButtons()
             relayout(width: 340, height: body.isEmpty ? 44 : 88)
             installKeyMonitor()
+            showPanel()
             playSound("Basso")
             autoHideTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { [weak self] _ in
                 self?.hide()
@@ -499,8 +531,9 @@ final class TerminalPanel {
 
     func updateListeningText(_ text: String) {
         guard case .listening = currentState else { return }
+        latestTranscript = text
         let visible = visibleTextForListening(text)
-        titleLabel.stringValue = visible.isEmpty ? "开始说话" : visible
+        titleLabel.stringValue = visible.isEmpty ? "请开始说话" : visible
         relayout(width: calculatedWidth(for: titleLabel.stringValue), height: 44)
     }
 
@@ -529,6 +562,7 @@ final class TerminalPanel {
         autoHideTimer = nil
         richHideTimer?.invalidate()
         richHideTimer = nil
+        latestTranscript = ""
         stopWaveAnimation()
         removeKeyMonitor()
         panel.orderOut(nil)

@@ -1,4 +1,5 @@
 import SwiftUI
+import Carbon
 
 enum WorkspaceSection: String, CaseIterable, Identifiable {
     case home = "首页"
@@ -72,7 +73,7 @@ struct MainWorkspaceView: View {
         case .voiceInput:
             SettingsView(embedded: true, initialTab: .voiceInput)
         case .voiceAgent:
-            SettingsView(embedded: true, initialTab: .voiceAgent)
+            VoiceAgentPanelView()
         case .settings:
             SettingsView(embedded: true, initialTab: .general)
         }
@@ -205,6 +206,72 @@ struct RealtimePanelView: View {
     }
 }
 
+struct VoiceAgentPanelView: View {
+    @ObservedObject private var session = VoiceAgentSessionStore.shared
+
+    private var currentHotkeyText: String {
+        let modifiers = SharedSettings.defaults.object(forKey: SharedSettings.Keys.terminalHotkeyModifiers) as? Int ?? 4096
+        let keyCode = SharedSettings.defaults.object(forKey: SharedSettings.Keys.terminalHotkeyKeyCode) as? Int ?? 49
+        return HotkeyConfig.displayString(modifiers: modifiers, keyCode: keyCode)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text("语音 Agent")
+                    .font(.largeTitle)
+                    .fontWeight(.semibold)
+                Spacer()
+                Text(session.stageText)
+                    .font(.headline)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.accentColor.opacity(0.15))
+                    .cornerRadius(999)
+            }
+
+            HStack(spacing: 12) {
+                HomeStatCard(title: "当前状态", value: session.stageText)
+                HomeStatCard(title: "Agent 热键", value: currentHotkeyText)
+                HomeStatCard(title: "结果状态", value: session.stage.rawValue)
+            }
+
+            TranscriptStreamBox(
+                title: "实时语音转写",
+                text: session.liveText,
+                placeholder: "按住 Voice Agent 热键后开始说话，实时文字会在这里出现。"
+            )
+
+            TranscriptStreamBox(
+                title: "系统理解的意图",
+                text: session.intentText,
+                placeholder: "系统理解后的动作会显示在这里，例如打开应用、查询天气或执行命令。"
+            )
+
+            AgentResultBox(
+                title: "执行结果",
+                text: session.resultText,
+                placeholder: "执行完成后的结果、错误或结构化反馈会显示在这里。"
+            )
+
+            HStack(spacing: 10) {
+                Button(session.stage == .listening ? "停止 Voice Agent" : "启动 Voice Agent") {
+                    VoiceTerminalService.shared.toggleFromUI()
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button("清空状态") {
+                    VoiceAgentSessionStore.shared.reset()
+                }
+                .buttonStyle(.bordered)
+            }
+
+            Spacer()
+        }
+        .padding(24)
+    }
+}
+
 struct TranscriptStreamBox: View {
     let title: String
     let text: String
@@ -238,6 +305,31 @@ struct TranscriptStreamBox: View {
                     }
                 }
             }
+        }
+    }
+}
+
+struct AgentResultBox: View {
+    let title: String
+    let text: String
+    let placeholder: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.headline)
+            ScrollView {
+                Text(text.isEmpty ? placeholder : text)
+                    .foregroundStyle(text.isEmpty ? .secondary : .primary)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 14)
+            }
+            .background(.thinMaterial)
+            .cornerRadius(12)
+            .frame(minHeight: 96, maxHeight: 180)
+            .frame(maxWidth: 860)
         }
     }
 }
