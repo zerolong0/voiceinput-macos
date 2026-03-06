@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 final class WeatherAgent: VoiceAgentPlugin {
     var intentTypes: [IntentType] { [.weather] }
@@ -59,12 +60,19 @@ final class WeatherAgent: VoiceAgentPlugin {
             湿度: \(humidity)%
             风速: \(wind) km/h
             """
+            let summary = "\(locationLabel)天气：\(tempC)°C，\(desc)，湿度\(humidity)% ，风速\(wind) km/h"
 
             return AgentResponse(
                 success: true,
                 title: "\(locationLabel)天气: \(tempC)°C \(desc)",
                 body: body,
-                actions: [],
+                actions: [
+                    AgentAction(label: "复制天气", systemImage: "doc.on.doc") {
+                        let pasteboard = NSPasteboard.general
+                        pasteboard.clearContents()
+                        pasteboard.setString(summary, forType: .string)
+                    }
+                ],
                 contentType: .keyValue
             )
         } catch {

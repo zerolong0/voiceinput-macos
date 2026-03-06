@@ -50,6 +50,9 @@ final class VoiceTerminalService: NSObject {
             )
             self?.executeCommand(intent)
         }
+        terminalPanel.onContinue = { [weak self] in
+            self?.handleHotkeyPressed()
+        }
     }
 
     func handleHotkeyPressed() {
@@ -215,11 +218,17 @@ final class VoiceTerminalService: NSObject {
                 } else {
                     switch intent.type.riskLevel {
                     case .safe:
-                        self.executeCommand(intent)
+                        self.terminalPanel.setState(.autoExecuting(intent))
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+                            guard let self else { return }
+                            if case .autoExecuting = self.terminalPanel.currentState {
+                                self.executeCommand(intent)
+                            }
+                        }
 
                     case .low:
                         self.terminalPanel.setState(.autoExecuting(intent))
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
                             guard let self else { return }
                             if case .autoExecuting = self.terminalPanel.currentState {
                                 self.executeCommand(intent)

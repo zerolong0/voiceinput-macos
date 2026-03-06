@@ -1,0 +1,122 @@
+{
+  "project": "VoiceInput macOS Core Input UX Hardening",
+  "createdAt": "2026-03-05",
+  "updatedAt": "2026-03-05",
+  "features": [
+    {
+      "id": "F1",
+      "name": "Sidebar Information Architecture",
+      "category": "ui",
+      "description": "Restructure left navigation to Home, Voice Input, Voice Agent, Settings; remove confusing nested classification.",
+      "steps": [
+        "Add home and voiceAgent sections to workspace sidebar enum and rendering",
+        "Route each section to dedicated panel view with existing capabilities preserved",
+        "Ensure Settings no longer acts as pseudo-home and retains configuration only"
+      ],
+      "successCriteria": "Sidebar order exactly Home -> Voice Input -> Voice Agent -> Settings and each item is clickable with expected content.",
+      "dependencies": [],
+      "techDocs": [
+        "macOS Human Interface Guidelines: Designing for macOS"
+      ],
+      "status": "complete",
+      "agent": "codex",
+      "notes": ""
+    },
+    {
+      "id": "F2",
+      "name": "Style Row Icon Overlap Fix",
+      "category": "bugfix",
+      "description": "Fix edit icon and selected-state icon overlap in style selection rows.",
+      "steps": [
+        "Refactor style row layout from overlap-based container to explicit trailing actions",
+        "Reserve stable trailing width to avoid clipping in selected and unselected states"
+      ],
+      "successCriteria": "Edit icon and selection icon never overlap in all style cards.",
+      "dependencies": [],
+      "techDocs": [
+        "AppKit/SwiftUI layout best practices"
+      ],
+      "status": "complete",
+      "agent": "codex",
+      "notes": ""
+    },
+    {
+      "id": "F3",
+      "name": "Strict Input Bar Width Adaptation",
+      "category": "ui",
+      "description": "Make compact input/status panel width always derived from visible text width with deterministic max-width behavior.",
+      "steps": [
+        "Unify compact width calculation to displayed text rather than raw source text",
+        "Keep listening state capped to about 10 Chinese characters viewport while allowing internal text scrolling/truncation strategy",
+        "Remove state-specific width jumps caused by long hidden text"
+      ],
+      "successCriteria": "Panel width changes strictly with visible text; no random long expansion during listening/rewriting transitions.",
+      "dependencies": [],
+      "techDocs": [
+        "HIG Loading and feedback guidance"
+      ],
+      "status": "complete",
+      "agent": "codex",
+      "notes": ""
+    },
+    {
+      "id": "F4",
+      "name": "Compact Rewriting State Restoration",
+      "category": "functional",
+      "description": "Restore rewriting state to compact '改写中' plus progress overlay, never showing full rewritten content during processing.",
+      "steps": [
+        "Change thinking stage entry to pass compact label only",
+        "Ensure displayed text resolver for rewriting stage is fixed and short"
+      ],
+      "successCriteria": "During rewriting, panel shows only short label and progress effect, without long text expansion.",
+      "dependencies": [
+        "F3"
+      ],
+      "techDocs": [
+        "HIG Loading"
+      ],
+      "status": "complete",
+      "agent": "codex",
+      "notes": ""
+    },
+    {
+      "id": "F5",
+      "name": "Injection Reliability and Native Fallback",
+      "category": "bugfix",
+      "description": "Improve focused insertion reliability when permissions are granted by reducing false-negative editability checks and improving paste fallback behavior.",
+      "steps": [
+        "Relax fallback gating so Cmd+V can be attempted when AX direct write fails",
+        "Use robust event source for synthetic paste and keep clipboard restoration",
+        "Keep no-focus fallback path with explicit user feedback"
+      ],
+      "successCriteria": "When focused input exists, injection success rate improves and no false 'permission issue' behavior appears in common web/native inputs.",
+      "dependencies": [],
+      "techDocs": [
+        "AXIsProcessTrustedWithOptions",
+        "Speech authorization and runtime permission flow"
+      ],
+      "status": "complete",
+      "agent": "codex",
+      "notes": ""
+    },
+    {
+      "id": "F6",
+      "name": "Copy Fallback Popup Lifecycle",
+      "category": "functional",
+      "description": "Match intended lifecycle: no auto-hide until copy/close; after copy auto-hide in 3 seconds; close hides immediately.",
+      "steps": [
+        "Add post-copy delayed hide behavior in panel callback path",
+        "Ensure fallback popup persists indefinitely when user does not copy",
+        "Remove competing transient success/copy hints that break deterministic flow"
+      ],
+      "successCriteria": "Fallback popup remains until user action; copy causes 3-second auto-hide; close hides immediately.",
+      "dependencies": [],
+      "techDocs": [
+        "HIG feedback and interruption minimization"
+      ],
+      "status": "complete",
+      "agent": "codex",
+      "notes": ""
+    }
+  ]
+}

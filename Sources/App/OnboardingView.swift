@@ -308,8 +308,8 @@ struct OnboardingView: View {
     private func resetInitialConfig() {
         SharedSettings.defaults.set("gemini-2.5-flash-lite", forKey: SharedSettings.Keys.llmModel)
         selectedStyle = SharedSettings.defaults.string(forKey: SharedSettings.Keys.selectedStyle) ?? "default"
-        let mod = SharedSettings.defaults.object(forKey: SharedSettings.Keys.hotkeyModifiers) as? Int ?? 2048
-        let code = SharedSettings.defaults.object(forKey: SharedSettings.Keys.hotkeyKeyCode) as? Int ?? 29
+        let mod = SharedSettings.defaults.object(forKey: SharedSettings.Keys.hotkeyModifiers) as? Int ?? HotkeyConfig.defaultModifiers
+        let code = SharedSettings.defaults.object(forKey: SharedSettings.Keys.hotkeyKeyCode) as? Int ?? HotkeyConfig.defaultKeyCode
         hotkeyText = formattedHotkey(modifiers: mod, keyCode: code)
     }
 

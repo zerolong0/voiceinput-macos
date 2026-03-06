@@ -481,8 +481,7 @@ final class InputStatusPanel {
         case .listening:
             return visibleTextForListening(rawText)
         case .rewriting:
-            let trimmed = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
-            return trimmed.isEmpty ? "改写中" : trimmed
+            return "改写中"
         default:
             return rawText
         }
@@ -500,33 +499,23 @@ final class InputStatusPanel {
             let bodyFont = NSFont.systemFont(ofSize: 13, weight: .regular)
             let titleW = (shortErrorTitle(from: text) as NSString).size(withAttributes: [.font: titleFont]).width
             let bodyW = (shortErrorBody(from: text) as NSString).size(withAttributes: [.font: bodyFont]).width
-            let contentW = max(titleW, min(bodyW, 220))
-            return max(300, min(380, 16 + 16 + 10 + contentW + 56))
-        }
-
-        if stage == .listening {
-            let font = NSFont.systemFont(ofSize: 15, weight: .semibold)
-            let attrs: [NSAttributedString.Key: Any] = [.font: font]
-            let visible = visibleTextForListening(text)
-            let measured = (visible as NSString).size(withAttributes: attrs).width
-            let viewport = ("汉汉汉汉汉汉汉汉汉汉" as NSString).size(withAttributes: attrs).width
-            let textWidth = min(measured, viewport)
-            let trailing = showAction ? CGFloat(80) : 20
-            return ceil(11 + 16 + 9 + textWidth + trailing)
+            let contentW = max(titleW, min(bodyW, 190))
+            return max(240, min(340, 16 + 16 + 10 + contentW + 52))
         }
 
         let font = NSFont.systemFont(ofSize: 15, weight: .semibold)
         let attrs: [NSAttributedString.Key: Any] = [.font: font]
-        let measured = (text.isEmpty ? " " : text as NSString).size(withAttributes: attrs).width
-        let maxText = ("汉汉汉汉汉汉汉汉" as NSString).size(withAttributes: attrs).width * 1.1
+        let visible = displayedText(for: stage, rawText: text)
+        let measured = (visible.isEmpty ? " " : visible as NSString).size(withAttributes: attrs).width
+        let maxText = ("汉汉汉汉汉汉汉汉汉汉" as NSString).size(withAttributes: attrs).width
         let textWidth = min(measured, maxText)
-        let trailing = showAction ? CGFloat(80) : 20
-        return max(112, min(260, 11 + 16 + 9 + textWidth + trailing))
+        let trailing = showAction ? CGFloat(68) : 10
+        return max(88, min(248, 11 + 16 + 9 + textWidth + trailing))
     }
 
     private func visibleTextForListening(_ text: String) -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return "按住说话，松开结束" }
+        guard !trimmed.isEmpty else { return "请开始说话，松开结束" }
         let font = NSFont.systemFont(ofSize: 15, weight: .semibold)
         let attrs: [NSAttributedString.Key: Any] = [.font: font]
         let viewport = ("汉汉汉汉汉汉汉汉汉汉" as NSString).size(withAttributes: attrs).width
@@ -566,6 +555,12 @@ final class InputStatusPanel {
 
     @objc private func copyAction() {
         onCopyRequested?()
+        if currentStage == .copyFallback {
+            autoHideTimer?.invalidate()
+            autoHideTimer = Timer.scheduledTimer(withTimeInterval: 3.0, repeats: false) { [weak self] _ in
+                self?.hide()
+            }
+        }
     }
 
     @objc private func closeAction() {

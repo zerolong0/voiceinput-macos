@@ -3,6 +3,7 @@ import Carbon
 import ApplicationServices
 import AVFoundation
 import Speech
+import OSLog
 
 private enum VoiceInputErrorKind {
     case permission
@@ -15,6 +16,7 @@ private enum VoiceInputErrorKind {
 final class AppHotkeyVoiceService: NSObject {
     private static weak var activeService: AppHotkeyVoiceService?
     static let shared = AppHotkeyVoiceService()
+    private let logger = Logger(subsystem: "com.voiceinput.macos", category: "hotkey")
 
     private var hotkeyRef: EventHotKeyRef?
     private var terminalHotkeyRef: EventHotKeyRef?
@@ -23,6 +25,9 @@ final class AppHotkeyVoiceService: NSObject {
     private var keyConsumeTapSource: CFRunLoopSource?
     private var activeHotkeyModifiers: UInt32 = UInt32(OptionSetFlag.optionSpaceModifiers.rawValue)
     private var activeHotkeyKeyCode: UInt32 = UInt32(OptionSetFlag.spaceKeyCode.rawValue)
+    private var activeTerminalHotkeyModifiers: UInt32 = UInt32(controlKey)
+    private var activeTerminalHotkeyKeyCode: UInt32 = 49
+    private var eventTapHandlesHotkeys = true
     private var isVoiceInputActive = false
     private var isContinuousMode = false
     private var currentText = ""
@@ -109,15 +114,15 @@ final class AppHotkeyVoiceService: NSObject {
         hotKeyID.signature = OSType(0x564F4943) // "VOIC"
         hotKeyID.id = 1
 
-        var modifiers = defaults.object(forKey: SharedSettings.Keys.hotkeyModifiers) as? Int ?? OptionSetFlag.optionSpaceModifiers.rawValue
-        var keyCode = defaults.object(forKey: SharedSettings.Keys.hotkeyKeyCode) as? Int ?? OptionSetFlag.spaceKeyCode.rawValue
+        var modifiers = defaults.object(forKey: SharedSettings.Keys.hotkeyModifiers) as? Int ?? HotkeyConfig.defaultModifiers
+        var keyCode = defaults.object(forKey: SharedSettings.Keys.hotkeyKeyCode) as? Int ?? HotkeyConfig.defaultKeyCode
         let validation = HotkeyConfig.validate(modifiers: modifiers, keyCode: keyCode)
         if !validation.isValid {
-            modifiers = OptionSetFlag.optionSpaceModifiers.rawValue
-            keyCode = OptionSetFlag.spaceKeyCode.rawValue
+            modifiers = HotkeyConfig.defaultModifiers
+            keyCode = HotkeyConfig.defaultKeyCode
             defaults.set(modifiers, forKey: SharedSettings.Keys.hotkeyModifiers)
             defaults.set(keyCode, forKey: SharedSettings.Keys.hotkeyKeyCode)
-            updateHotkeyRuntimeStatus("检测到冲突组合，已回退为 Option + Space")
+            updateHotkeyRuntimeStatus("检测到冲突组合，已回退为 F6")
         }
 
         let primaryStatus = registerHotkey(
@@ -125,14 +130,11 @@ final class AppHotkeyVoiceService: NSObject {
             keyCode: UInt32(keyCode),
             modifiers: UInt32(modifiers)
         )
+        logger.notice("Attempting to register hotkey modifiers=\(modifiers, privacy: .public) keyCode=\(keyCode, privacy: .public) status=\(primaryStatus, privacy: .public)")
         if primaryStatus == noErr {
             activeHotkeyKeyCode = UInt32(keyCode)
             activeHotkeyModifiers = UInt32(modifiers)
-            if modifiers == 0 {
-                setupKeyConsumeTap()
-            } else {
-                teardownKeyConsumeTap()
-            }
+            setupKeyConsumeTap()
             updateHotkeyRuntimeStatus("已注册: \(formattedHotkey(modifiers: modifiers, keyCode: keyCode))")
             registerTerminalHotkeyIfEnabled()
             return
@@ -140,26 +142,29 @@ final class AppHotkeyVoiceService: NSObject {
 
         // Fallback to a safer default to avoid leaving user on a key combo
         // that still triggers foreground app shortcuts.
-        let fallbackModifiers = OptionSetFlag.optionSpaceModifiers.rawValue
-        let fallbackKeyCode = OptionSetFlag.spaceKeyCode.rawValue
+        let fallbackModifiers = HotkeyConfig.defaultModifiers
+        let fallbackKeyCode = HotkeyConfig.defaultKeyCode
         let fallbackStatus = registerHotkey(
             hotKeyID: hotKeyID,
             keyCode: UInt32(fallbackKeyCode),
             modifiers: UInt32(fallbackModifiers)
         )
+        logger.error("Primary hotkey registration failed, fallback status=\(fallbackStatus, privacy: .public)")
         if fallbackStatus == noErr {
             defaults.set(fallbackModifiers, forKey: SharedSettings.Keys.hotkeyModifiers)
             defaults.set(fallbackKeyCode, forKey: SharedSettings.Keys.hotkeyKeyCode)
             activeHotkeyKeyCode = UInt32(fallbackKeyCode)
             activeHotkeyModifiers = UInt32(fallbackModifiers)
-            teardownKeyConsumeTap()
-            updateHotkeyRuntimeStatus("原组合注册失败，已回退为 Option + Space")
+            setupKeyConsumeTap()
+            updateHotkeyRuntimeStatus("原组合注册失败，已回退为 F6")
             registerTerminalHotkeyIfEnabled()
             return
         }
 
         updateHotkeyRuntimeStatus("热键注册失败: main=\(primaryStatus), fallback=\(fallbackStatus)")
-
+        activeHotkeyKeyCode = UInt32(keyCode)
+        activeHotkeyModifiers = UInt32(modifiers)
+        setupKeyConsumeTap()
         registerTerminalHotkeyIfEnabled()
     }
 
@@ -175,6 +180,8 @@ final class AppHotkeyVoiceService: NSObject {
 
         let modifiers = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyModifiers) as? Int ?? controlKey
         let keyCode = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyKeyCode) as? Int ?? 49
+        activeTerminalHotkeyModifiers = UInt32(modifiers)
+        activeTerminalHotkeyKeyCode = UInt32(keyCode)
 
         var hotKeyID = EventHotKeyID()
         hotKeyID.signature = OSType(0x564F4943) // "VOIC"
@@ -185,7 +192,7 @@ final class AppHotkeyVoiceService: NSObject {
             UInt32(keyCode),
             UInt32(modifiers),
             hotKeyID,
-            GetEventDispatcherTarget(),
+            GetApplicationEventTarget(),
             0,
             &newRef
         )
@@ -201,7 +208,7 @@ final class AppHotkeyVoiceService: NSObject {
         ]
 
         InstallEventHandler(
-            GetEventDispatcherTarget(),
+            GetApplicationEventTarget(),
             { _, event, _ in
                 guard let event else { return noErr }
                 let kind = GetEventKind(event)
@@ -251,7 +258,7 @@ final class AppHotkeyVoiceService: NSObject {
             keyCode,
             modifiers,
             hotKeyID,
-            GetEventDispatcherTarget(),
+            GetApplicationEventTarget(),
             0,
             &newRef
         )
@@ -335,15 +342,39 @@ final class AppHotkeyVoiceService: NSObject {
         }
 
         let keyCode = UInt32(event.getIntegerValueField(.keyboardEventKeycode))
-        guard keyCode == activeHotkeyKeyCode else {
-            return Unmanaged.passUnretained(event)
-        }
-
         let modifiers = HotkeyConfig.carbonFlags(from: NSEvent.ModifierFlags(rawValue: UInt(event.flags.rawValue)))
         let mask = UInt32(optionKey | cmdKey | controlKey | shiftKey)
         let current = UInt32(modifiers) & mask
-        let expected = activeHotkeyModifiers & mask
-        if current == expected {
+        let expectedVoice = activeHotkeyModifiers & mask
+
+        if keyCode == activeHotkeyKeyCode && current == expectedVoice {
+            if eventTapHandlesHotkeys {
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    if type == .keyDown {
+                        self.logger.notice("Hotkey detected via event tap keyDown")
+                        self.handleHotkeyPressed()
+                    } else {
+                        self.logger.notice("Hotkey detected via event tap keyUp")
+                        self.handleHotkeyReleased()
+                    }
+                }
+            }
+            return nil
+        }
+
+        let expectedTerminal = activeTerminalHotkeyModifiers & mask
+        let terminalEnabled = SharedSettings.defaults.object(forKey: SharedSettings.Keys.terminalHotkeyEnabled) as? Bool ?? false
+        if terminalEnabled && keyCode == activeTerminalHotkeyKeyCode && current == expectedTerminal {
+            if eventTapHandlesHotkeys {
+                DispatchQueue.main.async {
+                    if type == .keyDown {
+                        VoiceTerminalService.shared.handleHotkeyPressed()
+                    } else {
+                        VoiceTerminalService.shared.handleHotkeyReleased()
+                    }
+                }
+            }
             return nil
         }
 
@@ -356,14 +387,13 @@ final class AppHotkeyVoiceService: NSObject {
     }
 
     private func formattedHotkey(modifiers: Int, keyCode: Int) -> String {
-        if modifiers == 0 {
-            return HotkeyConfig.keyTitle(for: keyCode)
-        }
-        return "\(HotkeyConfig.modifierTitle(for: modifiers)) + \(HotkeyConfig.keyTitle(for: keyCode))"
+        HotkeyConfig.displayString(modifiers: modifiers, keyCode: keyCode)
     }
 
     private func handleHotkeyPressed() {
+        logger.notice("Hotkey pressed active=\(self.isVoiceInputActive, privacy: .public) continuous=\(self.isContinuousMode, privacy: .public) mode2=\(VoiceTerminalService.shared.isMode2Active, privacy: .public)")
         if isHotkeyCurrentlyDown {
+            logger.notice("Ignoring repeated hotkey press while key is already down")
             return
         }
         isHotkeyCurrentlyDown = true
@@ -389,15 +419,17 @@ final class AppHotkeyVoiceService: NSObject {
         pendingStopAfterActivation = false
         shouldStartContinuousOnActivation = isDoubleTap
         statusPanel.showArming()
-        RealtimeSessionStore.shared.setStage(.arming, text: "准备中")
+        RealtimeSessionStore.shared.setStage(.arming, text: "已检测到热键，准备启动语音输入")
         Task { @MainActor in
             let granted = await ensurePreflightPermissions()
+            self.logger.notice("Preflight permission result granted=\(granted, privacy: .public)")
             guard granted else { return }
             startRecording(startInContinuousMode: shouldStartContinuousOnActivation)
         }
     }
 
     private func handleHotkeyReleased() {
+        logger.notice("Hotkey released active=\(self.isVoiceInputActive, privacy: .public) continuous=\(self.isContinuousMode, privacy: .public) stopHandled=\(self.stopHandledOnPress, privacy: .public)")
         guard isHotkeyCurrentlyDown else { return }
         isHotkeyCurrentlyDown = false
         lastHotkeyReleaseAt = Date().timeIntervalSince1970
@@ -422,6 +454,7 @@ final class AppHotkeyVoiceService: NSObject {
 
     private func startRecording(startInContinuousMode: Bool = false) {
         guard !isVoiceInputActive else { return }
+        logger.notice("Starting recording continuous=\(startInContinuousMode, privacy: .public)")
         isVoiceInputActive = true
         didAttemptRecognitionRecovery = false
         isContinuousMode = startInContinuousMode
@@ -432,12 +465,13 @@ final class AppHotkeyVoiceService: NSObject {
             pauseExternalAudioBestEffort()
         }
         statusPanel.showListening(text: "")
-        RealtimeSessionStore.shared.setStage(.listening, text: "正在收音...")
+        RealtimeSessionStore.shared.setStage(.listening, text: "热键已触发，正在收音")
         RealtimeSessionStore.shared.updateOriginalLiveText("")
         RealtimeSessionStore.shared.updateRewrittenText("")
 
         do {
             try whisperEngine.start()
+            logger.notice("whisperEngine.start succeeded")
             if isContinuousMode {
                 statusPanel.show(status: "连续输入已开启", text: "双击进入连续模式后，可按一次快捷键结束", showCopy: false)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { [weak self] in
@@ -453,6 +487,7 @@ final class AppHotkeyVoiceService: NSObject {
                 }
             }
         } catch {
+            logger.error("whisperEngine.start failed: \(error.localizedDescription, privacy: .public)")
             isVoiceInputActive = false
             isContinuousMode = false
             pendingStopAfterActivation = false
@@ -463,6 +498,7 @@ final class AppHotkeyVoiceService: NSObject {
 
     private func stopRecordingAndProcess() {
         guard isVoiceInputActive else { return }
+        logger.notice("Stopping recording and processing currentTextLength=\(self.currentText.count, privacy: .public)")
         isStoppingRecording = true
         whisperEngine.stop()
         isStoppingRecording = false
@@ -476,13 +512,14 @@ final class AppHotkeyVoiceService: NSObject {
         shouldStartContinuousOnActivation = false
 
         guard !capturedText.isEmpty else {
+            logger.notice("Captured text empty after stop; hiding panel")
             statusPanel.hide()
             RealtimeSessionStore.shared.setStage(.idle, text: "已停止")
             return
         }
 
         let localProcessed = textProcessor.process(capturedText)
-        statusPanel.showThinking(text: localProcessed)
+        statusPanel.showThinking(text: "改写中")
         RealtimeSessionStore.shared.setStage(.rewriting, text: "改写中")
         RealtimeSessionStore.shared.updateOriginalLiveText(capturedText)
 
@@ -501,7 +538,7 @@ final class AppHotkeyVoiceService: NSObject {
         let baseURL = SharedSettings.defaults.string(forKey: SharedSettings.Keys.llmAPIBaseURL) ?? "https://oneapi.gemiaude.com/v1"
         let apiKey = SharedSettings.defaults.string(forKey: SharedSettings.Keys.llmAPIKey) ?? ""
         let model = SharedSettings.defaults.string(forKey: SharedSettings.Keys.voiceInputModel) ?? "gemini-2.5-flash-lite"
-        statusPanel.showThinking(text: localProcessed)
+        statusPanel.showThinking(text: "改写中")
         RealtimeSessionStore.shared.setStage(.rewriting, text: "改写中")
 
         Task {
@@ -544,6 +581,7 @@ final class AppHotkeyVoiceService: NSObject {
         style: String,
         note: String
     ) {
+        logger.notice("Delivering result finalLength=\(finalText.count, privacy: .public)")
         RealtimeSessionStore.shared.updateRewrittenText(finalText)
 
         if insertTextIntoFocusedApp(finalText) {
@@ -595,28 +633,30 @@ final class AppHotkeyVoiceService: NSObject {
     }
 
     private func insertTextIntoFocusedApp(_ text: String) -> Bool {
-        guard let focused = focusedElement() else { return false }
+        guard let focused = focusedElement() else {
+            return pasteTextViaCommandV(text)
+        }
 
         // Prefer AX direct insertion for editable controls; fallback to pasteboard Cmd+V.
         if insertTextViaAX(text, into: focused) {
             return true
         }
 
-        // AX insertion failed — only attempt Cmd+V if focused element looks editable
-        guard isAXEditable(focused) || isLikelyEditableByRole(focused) else {
-            return false
-        }
+        return pasteTextViaCommandV(text)
+    }
 
+    private func pasteTextViaCommandV(_ text: String) -> Bool {
         let pasteboard = NSPasteboard.general
         let original = pasteboard.string(forType: .string)
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
 
-        let source = CGEventSource(stateID: .privateState)
+        let source = CGEventSource(stateID: .combinedSessionState)
         let cmdDown = CGEvent(keyboardEventSource: source, virtualKey: 0x37, keyDown: true)
         let vDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true)
         let vUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false)
         let cmdUp = CGEvent(keyboardEventSource: source, virtualKey: 0x37, keyDown: false)
+        guard cmdDown != nil, vDown != nil, vUp != nil, cmdUp != nil else { return false }
         vDown?.flags = .maskCommand
         vUp?.flags = .maskCommand
         cmdDown?.post(tap: .cghidEventTap)
@@ -630,22 +670,7 @@ final class AppHotkeyVoiceService: NSObject {
                 pasteboard.setString(original, forType: .string)
             }
         }
-        // Cmd+V was attempted but success is not guaranteed — show brief tip
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
-            self?.statusPanel.show(status: "已输入 ✓", text: "如未成功请点击复制后手动粘贴", showCopy: true)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
-                self?.statusPanel.hide()
-            }
-        }
         return true
-    }
-
-    private func isLikelyEditableByRole(_ element: AXUIElement) -> Bool {
-        var roleRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success,
-              let role = roleRef as? String else { return false }
-        let editableRoles: Set<String> = ["AXTextField", "AXTextArea", "AXSearchField", "AXComboBox"]
-        return editableRoles.contains(role)
     }
 
     private func focusedElement() -> AXUIElement? {
@@ -746,7 +771,7 @@ final class AppHotkeyVoiceService: NSObject {
 
         let speechGranted = await ensureSpeechPermission()
         guard speechGranted else {
-            let msg = "未授权语音识别。请在 系统设置 > 隐私与安全性 > 语音识别 中允许 VoiceInput，并重启应用后重试。"
+            let msg = "热键已识别，但未授权语音识别。请在 系统设置 > 隐私与安全性 > 语音识别 中允许 VoiceInput，并重启应用后重试。"
             reportError(.permission, message: msg)
             RealtimeSessionStore.shared.setStage(.permissionBlocked, text: msg)
             openSystemPrivacySettings(anchor: "Privacy_SpeechRecognition")
@@ -755,7 +780,7 @@ final class AppHotkeyVoiceService: NSObject {
 
         let micGranted = await ensureMicrophonePermission()
         guard micGranted else {
-            let msg = "未授权麦克风。请在 系统设置 > 隐私与安全性 > 麦克风 中允许 VoiceInput，并重启应用后重试。"
+            let msg = "热键已识别，但未授权麦克风。请在 系统设置 > 隐私与安全性 > 麦克风 中允许 VoiceInput，并重启应用后重试。"
             reportError(.permission, message: msg)
             RealtimeSessionStore.shared.setStage(.permissionBlocked, text: msg)
             openSystemPrivacySettings(anchor: "Privacy_Microphone")
@@ -764,7 +789,7 @@ final class AppHotkeyVoiceService: NSObject {
 
         let axGranted = await ensureAccessibilityPermission()
         guard axGranted else {
-            let msg = "未授权辅助功能。请在 系统设置 > 隐私与安全性 > 辅助功能 中允许 VoiceInput，并重启应用后重试。"
+            let msg = "热键已识别，但未授权辅助功能。请在 系统设置 > 隐私与安全性 > 辅助功能 中允许 VoiceInput，并重启应用后重试。"
             reportError(.permission, message: msg)
             RealtimeSessionStore.shared.setStage(.permissionBlocked, text: msg)
             openSystemPrivacySettings(anchor: "Privacy_Accessibility")
@@ -775,6 +800,7 @@ final class AppHotkeyVoiceService: NSObject {
 
     private func ensureSpeechPermission() async -> Bool {
         let status = SFSpeechRecognizer.authorizationStatus()
+        logger.notice("Speech permission status=\(status.rawValue, privacy: .public)")
         if status == .authorized { return true }
         if status == .denied || status == .restricted { return false }
         return await withCheckedContinuation { continuation in
@@ -786,6 +812,7 @@ final class AppHotkeyVoiceService: NSObject {
 
     private func ensureMicrophonePermission() async -> Bool {
         let status = AVCaptureDevice.authorizationStatus(for: .audio)
+        logger.notice("Microphone permission status=\(status.rawValue, privacy: .public)")
         if status == .authorized { return true }
         if status == .denied || status == .restricted { return false }
         return await withCheckedContinuation { continuation in
@@ -796,17 +823,22 @@ final class AppHotkeyVoiceService: NSObject {
     }
 
     private func ensureAccessibilityPermission() async -> Bool {
-        if AccessibilityTrust.isTrusted(prompt: false) { return true }
+        let initialTrust = AccessibilityTrust.isTrusted(prompt: false)
+        logger.notice("Accessibility permission initialTrust=\(initialTrust, privacy: .public)")
+        if initialTrust { return true }
 
-        // Stale TCC entry from previous build? Reset and re-prompt.
-        if AccessibilityTrust.resetAndReauthorize() { return true }
+        // Ask system to show the standard prompt; avoid auto-reset here to prevent
+        // permission churn after rebuilds.
+        _ = AccessibilityTrust.isTrusted(prompt: true)
 
         // Wait for user to toggle the switch in System Settings.
-        for _ in 0..<20 {
+        for _ in 0..<24 {
             try? await Task.sleep(nanoseconds: 300_000_000)
             if AccessibilityTrust.isTrusted(prompt: false) { return true }
         }
-        return AccessibilityTrust.isTrusted(prompt: false)
+        let finalTrust = AccessibilityTrust.isTrusted(prompt: false)
+        logger.notice("Accessibility permission finalTrust=\(finalTrust, privacy: .public)")
+        return finalTrust
     }
 
     private func reportError(_ kind: VoiceInputErrorKind, message: String) {
@@ -824,7 +856,14 @@ final class AppHotkeyVoiceService: NSObject {
             prefix = "启动失败"
         }
         statusPanel.showError("\(prefix)：\(message)")
-        RealtimeSessionStore.shared.setStage(.failed, text: "\(prefix)：\(message)")
+        let stageText: String
+        switch kind {
+        case .permission, .startup, .recognition:
+            stageText = "热键已识别，但\(prefix)：\(message)"
+        case .rewrite, .injection:
+            stageText = "\(prefix)：\(message)"
+        }
+        RealtimeSessionStore.shared.setStage(.failed, text: stageText)
     }
 
     private func openSystemPrivacySettings(anchor: String) {

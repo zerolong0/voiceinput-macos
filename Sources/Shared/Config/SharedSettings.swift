@@ -55,10 +55,10 @@ enum SharedSettings {
             defaults.set(true, forKey: Keys.hotkeyEnabled)
         }
         if defaults.object(forKey: Keys.hotkeyModifiers) == nil {
-            defaults.set(OptionSetFlag.optionSpaceModifiers.rawValue, forKey: Keys.hotkeyModifiers)
+            defaults.set(HotkeyConfig.defaultModifiers, forKey: Keys.hotkeyModifiers)
         }
         if defaults.object(forKey: Keys.hotkeyKeyCode) == nil {
-            defaults.set(OptionSetFlag.spaceKeyCode.rawValue, forKey: Keys.hotkeyKeyCode)
+            defaults.set(HotkeyConfig.defaultKeyCode, forKey: Keys.hotkeyKeyCode)
         }
         if defaults.string(forKey: Keys.hotkeyRuntimeStatus) == nil {
             defaults.set("等待注册", forKey: Keys.hotkeyRuntimeStatus)

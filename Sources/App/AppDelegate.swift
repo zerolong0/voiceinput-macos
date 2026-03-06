@@ -12,6 +12,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private let hotkeyService = AppHotkeyVoiceService.shared
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        terminateConflictingVoiceInputInstances()
         SharedSettings.bootstrapDefaults()
         AppBehaviorController.applyFromDefaults()
         hotkeyService.start()
@@ -131,5 +132,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return true
+    }
+
+    private func terminateConflictingVoiceInputInstances() {
+        guard let bundleID = Bundle.main.bundleIdentifier else { return }
+        let currentPID = ProcessInfo.processInfo.processIdentifier
+        let currentBundleURL = Bundle.main.bundleURL.resolvingSymlinksInPath()
+
+        for app in NSRunningApplication.runningApplications(withBundleIdentifier: bundleID) {
+            guard app.processIdentifier != currentPID else { continue }
+
+            let otherBundleURL = app.bundleURL?.resolvingSymlinksInPath()
+            if otherBundleURL == currentBundleURL {
+                continue
+            }
+
+            if !app.forceTerminate() {
+                kill(app.processIdentifier, SIGKILL)
+            }
+        }
     }
 }

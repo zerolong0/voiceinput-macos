@@ -1,23 +1,25 @@
 import SwiftUI
 
 enum WorkspaceSection: String, CaseIterable, Identifiable {
-    case realtime = "实时输入"
-    case history = "历史记录"
+    case home = "首页"
+    case voiceInput = "语音输入"
+    case voiceAgent = "语音 Agent"
     case settings = "设置"
 
     var id: String { rawValue }
 
     var icon: String {
         switch self {
-        case .realtime: return "waveform"
-        case .history: return "clock.arrow.circlepath"
+        case .home: return "house"
+        case .voiceInput: return "waveform"
+        case .voiceAgent: return "sparkles.rectangle.stack"
         case .settings: return "gearshape"
         }
     }
 }
 
 struct MainWorkspaceView: View {
-    @State private var selection: WorkspaceSection = .realtime
+    @State private var selection: WorkspaceSection = .home
 
     var body: some View {
         HStack(spacing: 0) {
@@ -65,12 +67,46 @@ struct MainWorkspaceView: View {
     @ViewBuilder
     private var content: some View {
         switch selection {
-        case .realtime:
-            RealtimePanelView()
-        case .history:
-            HistoryPanelView()
+        case .home:
+            HomePanelView()
+        case .voiceInput:
+            SettingsView(embedded: true, initialTab: .voiceInput)
+        case .voiceAgent:
+            SettingsView(embedded: true, initialTab: .voiceAgent)
         case .settings:
-            SettingsPanelView()
+            SettingsView(embedded: true, initialTab: .general)
+        }
+    }
+}
+
+struct HomePanelView: View {
+    @ObservedObject private var session = RealtimeSessionStore.shared
+    @State private var itemCount = 0
+
+    private var currentHotkeyText: String {
+        let modifiers = SharedSettings.defaults.object(forKey: SharedSettings.Keys.hotkeyModifiers) as? Int ?? HotkeyConfig.defaultModifiers
+        let keyCode = SharedSettings.defaults.object(forKey: SharedSettings.Keys.hotkeyKeyCode) as? Int ?? HotkeyConfig.defaultKeyCode
+        return HotkeyConfig.displayString(modifiers: modifiers, keyCode: keyCode)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("首页")
+                .font(.largeTitle)
+                .fontWeight(.semibold)
+
+            HStack(spacing: 12) {
+                HomeStatCard(title: "当前状态", value: session.stageText)
+                HomeStatCard(title: "历史记录", value: "\(itemCount)")
+                HomeStatCard(title: "当前热键", value: currentHotkeyText)
+                HomeStatCard(title: "热键状态", value: SharedSettings.defaults.string(forKey: SharedSettings.Keys.hotkeyRuntimeStatus) ?? "未知")
+            }
+
+            HistoryPanelView()
+        }
+        .padding(24)
+        .onAppear {
+            itemCount = InputHistoryStore.shared.all().count
         }
     }
 }

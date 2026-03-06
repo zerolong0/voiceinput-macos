@@ -17,6 +17,21 @@ reset_tcc_for_bundle() {
   tccutil reset AppleEvents "$bid" || true
 }
 
+reset_onboarding_state() {
+  # Main app onboarding completion flag
+  defaults delete com.voiceinput.macos hasCompletedOnboarding 2>/dev/null || true
+  # Safety net: if older builds used global domain
+  defaults delete NSGlobalDomain hasCompletedOnboarding 2>/dev/null || true
+}
+
+cleanup_running_voiceinput_instances() {
+  osascript -e 'tell application "VoiceInput" to quit' 2>/dev/null || true
+  killall VoiceInput 2>/dev/null || true
+  pkill -f '/Applications/VoiceInput.app/Contents/MacOS/VoiceInput' 2>/dev/null || true
+  pkill -f '/Library/Developer/Xcode/DerivedData/.*/VoiceInput.app/Contents/MacOS/VoiceInput' 2>/dev/null || true
+  pkill -f '/Users/.*/Library/Developer/Xcode/DerivedData/.*/VoiceInput.app/Contents/MacOS/VoiceInput' 2>/dev/null || true
+}
+
 xcodegen generate >/dev/null
 xcodebuild -project VoiceInput.xcodeproj -scheme VoiceInput -configuration Debug build >/dev/null
 
@@ -54,7 +69,12 @@ if [[ "${RESET_TCC:-0}" == "1" ]]; then
   killall tccd 2>/dev/null || true
 fi
 
-killall VoiceInput 2>/dev/null || true
+if [[ "${RESET_ONBOARDING:-0}" == "1" ]]; then
+  echo "Resetting onboarding state..."
+  reset_onboarding_state
+fi
+
+cleanup_running_voiceinput_instances
 open /Applications/VoiceInput.app
 
 echo "Installed and launched: /Applications/VoiceInput.app"

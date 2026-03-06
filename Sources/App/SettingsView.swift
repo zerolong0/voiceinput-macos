@@ -3,29 +3,108 @@ import AVFoundation
 import Speech
 import ApplicationServices
 
+private struct ModelCatalogItem: Identifiable, Hashable {
+    let id: String
+    let label: String
+}
+
+private enum ModelCatalogServiceError: LocalizedError {
+    case invalidURL
+    case badStatus(Int)
+    case decodeFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "模型列表地址无效"
+        case .badStatus(let code):
+            return "模型列表请求失败（\(code)）"
+        case .decodeFailed:
+            return "模型列表解析失败"
+        }
+    }
+}
+
+private final class ModelCatalogService {
+    private struct OpenAIModelsResponse: Decodable {
+        struct ModelData: Decodable {
+            let id: String
+        }
+
+        let data: [ModelData]
+    }
+
+    func fetchModels(baseURL: String, apiKey: String) async throws -> [ModelCatalogItem] {
+        let trimmedBase = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedBase.isEmpty else { throw ModelCatalogServiceError.invalidURL }
+        guard let url = modelsURL(from: trimmedBase) else { throw ModelCatalogServiceError.invalidURL }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 15
+        if !trimmedKey.isEmpty {
+            request.setValue("Bearer \(trimmedKey)", forHTTPHeaderField: "Authorization")
+        }
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw ModelCatalogServiceError.badStatus(-1)
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            throw ModelCatalogServiceError.badStatus(http.statusCode)
+        }
+
+        guard let decoded = try? JSONDecoder().decode(OpenAIModelsResponse.self, from: data) else {
+            throw ModelCatalogServiceError.decodeFailed
+        }
+
+        let items = decoded.data
+            .map { ModelCatalogItem(id: $0.id, label: $0.id) }
+            .sorted { $0.id.localizedCaseInsensitiveCompare($1.id) == .orderedAscending }
+
+        if items.isEmpty {
+            throw ModelCatalogServiceError.decodeFailed
+        }
+        return items
+    }
+
+    private func modelsURL(from baseURL: String) -> URL? {
+        let normalized = baseURL.hasSuffix("/") ? String(baseURL.dropLast()) : baseURL
+        if normalized.hasSuffix("/chat/completions") {
+            return URL(string: String(normalized.dropLast("/chat/completions".count)) + "/models")
+        }
+        return URL(string: normalized + "/models")
+    }
+}
+
 // MARK: - Tab 枚举
-enum SettingsTab: String, CaseIterable {
-    case voiceInput = "语音输入"
-    case voiceAgent = "Voice Agent"
-    case general = "通用设置"
+enum SettingsTab {
+    case voiceInput
+    case voiceAgent
+    case general
 }
 
 // MARK: - 设置视图
 struct SettingsView: View {
     var embedded: Bool = false
+    var initialTab: SettingsTab = .voiceInput
     @AppStorage("selectedStyle") private var selectedStyle = "default"
     @AppStorage("hotkeyEnabled") private var hotkeyEnabled = true
-    @AppStorage("hotkeyModifiers") private var hotkeyModifiers = 2048
-    @AppStorage("hotkeyKeyCode") private var hotkeyKeyCode = 49
+    @AppStorage("hotkeyModifiers") private var hotkeyModifiers = HotkeyConfig.defaultModifiers
+    @AppStorage("hotkeyKeyCode") private var hotkeyKeyCode = HotkeyConfig.defaultKeyCode
     @AppStorage("hotkeyHoldToStopThreshold") private var hotkeyHoldToStopThreshold = 0.35
 
-    @State private var selectedTab: SettingsTab = .voiceInput
     @State private var llmEnabled = false
     @State private var llmAPIBaseURL = "https://oneapi.gemiaude.com/v1"
     @State private var llmAPIKey = ""
     @State private var llmModel = "gemini-2.5-flash-lite"
     @State private var agentModel = "gemini-2.5-flash"
     @State private var voiceInputModel = "gemini-2.5-flash-lite"
+    @State private var availableModels: [ModelCatalogItem] = SharedSettings.presetModels.map { .init(id: $0.id, label: $0.label) }
+    @State private var isRefreshingModels = false
+    @State private var modelCatalogMessage = ""
     @State private var saveHistoryEnabled = true
     @State private var muteExternalAudioDuringInput = true
     @State private var interactionSoundEnabled = true
@@ -50,6 +129,9 @@ struct SettingsView: View {
     @State private var customIntentPrompt = ""
     @State private var showIntentPromptSheet = false
     @State private var showAPIKey = false
+    @State private var modelRefreshTask: Task<Void, Never>?
+
+    private let modelCatalogService = ModelCatalogService()
 
     // 权限状态
     @State private var micGranted = false
@@ -77,25 +159,15 @@ struct SettingsView: View {
                 .padding(.bottom, 12)
             }
 
-            // Tab Picker
-            Picker("", selection: $selectedTab) {
-                ForEach(SettingsTab.allCases, id: \.self) { tab in
-                    Text(tab.rawValue).tag(tab)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 24)
-            .padding(.bottom, 16)
-
-            // 内容
             ScrollView {
                 VStack(spacing: 24) {
-                    switch selectedTab {
-                    case .voiceInput:
+                    if embedded {
+                        embeddedContent(for: initialTab)
+                    } else {
                         voiceInputContent
-                    case .voiceAgent:
+                        Divider().opacity(0.25)
                         voiceAgentContent
-                    case .general:
+                        Divider().opacity(0.25)
                         generalContent
                     }
                 }
@@ -159,6 +231,7 @@ struct SettingsView: View {
             syncFromSharedDefaults()
             diagnostics = PermissionDiagnostics.snapshot()
             refreshPermissions()
+            scheduleModelRefresh(immediate: true)
         }
         .onReceive(Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()) { _ in
             refreshHotkeyRuntimeStatus()
@@ -174,8 +247,14 @@ struct SettingsView: View {
         .onChange(of: terminalHotkeyModifiers) { _ in syncToSharedDefaults() }
         .onChange(of: terminalHotkeyKeyCode) { _ in syncToSharedDefaults() }
         .onChange(of: llmEnabled) { _ in syncToSharedDefaults() }
-        .onChange(of: llmAPIBaseURL) { _ in syncToSharedDefaults() }
-        .onChange(of: llmAPIKey) { _ in syncToSharedDefaults() }
+        .onChange(of: llmAPIBaseURL) { _ in
+            syncToSharedDefaults()
+            scheduleModelRefresh(immediate: false)
+        }
+        .onChange(of: llmAPIKey) { _ in
+            syncToSharedDefaults()
+            scheduleModelRefresh(immediate: false)
+        }
         .onChange(of: llmModel) { _ in syncToSharedDefaults() }
         .onChange(of: agentModel) { _ in syncToSharedDefaults() }
         .onChange(of: voiceInputModel) { _ in syncToSharedDefaults() }
@@ -195,6 +274,7 @@ struct SettingsView: View {
         .onDisappear {
             stopHotkeyCapture()
             stopTerminalHotkeyCapture()
+            modelRefreshTask?.cancel()
         }
     }
 
@@ -259,6 +339,30 @@ struct SettingsView: View {
                 }
             }
             Text("点击风格右上角 ✏️ 可为该风格自定义改写提示词。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+
+        SettingsSection(title: "AI 润色与模型", icon: "cpu") {
+            Toggle("启用 AI 润色", isOn: $llmEnabled)
+                .toggleStyle(.switch)
+
+            HStack {
+                Text("语音润色模型")
+                    .font(.subheadline)
+                Spacer()
+                Picker("", selection: $voiceInputModel) {
+                    ForEach(availableModels, id: \.id) { model in
+                        Text(model.label).tag(model.id)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: 220)
+            }
+
+            modelCatalogStatusView
+
+            Text("语音润色模型用于文本改写。模型列表会跟随设置中的 API 配置自动刷新。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -331,23 +435,43 @@ struct SettingsView: View {
                     .foregroundStyle(.orange)
             }
         }
+
+        SettingsSection(title: "Agent 模型", icon: "brain.head.profile") {
+            HStack {
+                Text("当前模型")
+                    .font(.subheadline)
+                Spacer()
+                Picker("", selection: $agentModel) {
+                    ForEach(availableModels, id: \.id) { model in
+                        Text(model.label).tag(model.id)
+                    }
+                }
+                .pickerStyle(.menu)
+                .frame(maxWidth: 220)
+            }
+
+            modelCatalogStatusView
+
+            Text("Agent 模型用于语音命令意图识别。模型列表会跟随设置中的 API 配置自动刷新。")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 
     // MARK: - Tab: 通用设置
 
     @ViewBuilder
     private var generalContent: some View {
-        // 模型配置
-        SettingsSection(title: "模型配置", icon: "cpu") {
-            Toggle("启用 AI 润色", isOn: $llmEnabled)
-                .toggleStyle(.switch)
-
+        SettingsSection(title: "API 配置", icon: "network") {
             VStack(alignment: .leading, spacing: 8) {
                 Text("API Base URL")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 TextField("https://oneapi.gemiaude.com/v1", text: $llmAPIBaseURL)
                     .textFieldStyle(.roundedBorder)
+                Text("修改后会自动请求 /models 刷新模型列表。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -374,34 +498,14 @@ struct SettingsView: View {
             }
 
             HStack {
-                Text("Agent 模型")
-                    .font(.subheadline)
-                Spacer()
-                Picker("", selection: $agentModel) {
-                    ForEach(SharedSettings.presetModels, id: \.id) { preset in
-                        Text(preset.label).tag(preset.id)
-                    }
+                Button("立即刷新模型列表") {
+                    scheduleModelRefresh(immediate: true)
                 }
-                .pickerStyle(.menu)
-                .frame(maxWidth: 220)
-            }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
 
-            HStack {
-                Text("语音润色模型")
-                    .font(.subheadline)
-                Spacer()
-                Picker("", selection: $voiceInputModel) {
-                    ForEach(SharedSettings.presetModels, id: \.id) { preset in
-                        Text(preset.label).tag(preset.id)
-                    }
-                }
-                .pickerStyle(.menu)
-                .frame(maxWidth: 220)
+                modelCatalogStatusView
             }
-
-            Text("Agent 模型用于意图识别，语音润色模型用于文本改写。")
-                .font(.caption)
-                .foregroundStyle(.secondary)
         }
 
         // 权限状态（带操作按钮）
@@ -481,6 +585,36 @@ struct SettingsView: View {
                     }
                 }
             }
+        }
+    }
+
+
+    @ViewBuilder
+    private func embeddedContent(for tab: SettingsTab) -> some View {
+        switch tab {
+        case .voiceInput:
+            voiceInputContent
+        case .voiceAgent:
+            voiceAgentContent
+        case .general:
+            generalContent
+        }
+    }
+
+    @ViewBuilder
+    private var modelCatalogStatusView: some View {
+        if isRefreshingModels {
+            HStack(spacing: 6) {
+                ProgressView()
+                    .controlSize(.small)
+                Text("正在刷新模型列表")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } else if !modelCatalogMessage.isEmpty {
+            Text(modelCatalogMessage)
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -632,6 +766,7 @@ struct SettingsView: View {
         stylePrompts = prompts
         customIntentPrompt = defaults.string(forKey: SharedSettings.Keys.customIntentPrompt) ?? ""
         sanitizeHotkeyIfNeeded()
+        ensureSelectedModelsVisible()
     }
 
     private func syncToSharedDefaults() {
@@ -667,12 +802,59 @@ struct SettingsView: View {
         )
     }
 
+    private func scheduleModelRefresh(immediate: Bool) {
+        modelRefreshTask?.cancel()
+        modelRefreshTask = Task { @MainActor in
+            if !immediate {
+                try? await Task.sleep(nanoseconds: 700_000_000)
+            }
+            await refreshModelCatalog()
+        }
+    }
+
+    @MainActor
+    private func refreshModelCatalog() async {
+        let baseURL = llmAPIBaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let apiKey = llmAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !baseURL.isEmpty else {
+            availableModels = SharedSettings.presetModels.map { .init(id: $0.id, label: $0.label) }
+            ensureSelectedModelsVisible()
+            modelCatalogMessage = "请先填写 API Base URL"
+            return
+        }
+
+        isRefreshingModels = true
+        defer { isRefreshingModels = false }
+
+        do {
+            let models = try await modelCatalogService.fetchModels(baseURL: baseURL, apiKey: apiKey)
+            availableModels = mergeCurrentSelections(into: models)
+            modelCatalogMessage = "已刷新 \(availableModels.count) 个模型"
+        } catch {
+            availableModels = mergeCurrentSelections(into: SharedSettings.presetModels.map { .init(id: $0.id, label: $0.label) })
+            modelCatalogMessage = error.localizedDescription
+        }
+    }
+
+    private func mergeCurrentSelections(into source: [ModelCatalogItem]) -> [ModelCatalogItem] {
+        var merged = source
+        for current in [agentModel, voiceInputModel] where !current.isEmpty && !merged.contains(where: { $0.id == current }) {
+            merged.insert(.init(id: current, label: current), at: 0)
+        }
+        return merged
+    }
+
+    private func ensureSelectedModelsVisible() {
+        availableModels = mergeCurrentSelections(into: availableModels)
+    }
+
     private func sanitizeHotkeyIfNeeded() {
         let validation = HotkeyConfig.validate(modifiers: hotkeyModifiers, keyCode: hotkeyKeyCode)
         guard !validation.isValid else { return }
-        hotkeyModifiers = OptionSetFlag.optionSpaceModifiers.rawValue
-        hotkeyKeyCode = OptionSetFlag.spaceKeyCode.rawValue
-        hotkeyCaptureHint = "检测到冲突快捷键，已回退为 Option + Space"
+        hotkeyModifiers = HotkeyConfig.defaultModifiers
+        hotkeyKeyCode = HotkeyConfig.defaultKeyCode
+        hotkeyCaptureHint = "检测到冲突快捷键，已回退为 F6"
         syncToSharedDefaults()
     }
 

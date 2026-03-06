@@ -1,5 +1,6 @@
 import Foundation
 import Contacts
+import AppKit
 
 final class ContactsAgent: VoiceAgentPlugin {
     var intentTypes: [IntentType] { [.queryContact] }
@@ -45,13 +46,19 @@ final class ContactsAgent: VoiceAgentPlugin {
             let displayName = fullName.isEmpty ? name : fullName
 
             var lines: [String] = []
+            var firstPhone: String?
             for phone in contact.phoneNumbers {
                 let label = CNLabeledValue<NSString>.localizedString(forLabel: phone.label ?? "")
-                lines.append("电话(\(label)): \(phone.value.stringValue)")
+                let number = phone.value.stringValue
+                firstPhone = firstPhone ?? number
+                lines.append("电话(\(label)): \(number)")
             }
+            var firstEmail: String?
             for email in contact.emailAddresses {
                 let label = CNLabeledValue<NSString>.localizedString(forLabel: email.label ?? "")
-                lines.append("邮件(\(label)): \(email.value)")
+                let address = String(email.value)
+                firstEmail = firstEmail ?? address
+                lines.append("邮件(\(label)): \(address)")
             }
             if !contact.organizationName.isEmpty {
                 lines.append("公司: \(contact.organizationName)")
@@ -62,11 +69,28 @@ final class ContactsAgent: VoiceAgentPlugin {
             }
 
             let body = lines.joined(separator: "\n")
+            var actions: [AgentAction] = []
+            if let firstPhone {
+                actions.append(AgentAction(label: "复制电话", systemImage: "phone") {
+                    let pasteboard = NSPasteboard.general
+                    pasteboard.clearContents()
+                    pasteboard.setString(firstPhone, forType: .string)
+                })
+            } else if let firstEmail {
+                actions.append(AgentAction(label: "复制邮箱", systemImage: "envelope") {
+                    let pasteboard = NSPasteboard.general
+                    pasteboard.clearContents()
+                    pasteboard.setString(firstEmail, forType: .string)
+                })
+            }
+            actions.append(AgentAction(label: "打开通讯录", systemImage: "person.crop.circle") {
+                NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Contacts.app"))
+            })
             return AgentResponse(
                 success: true,
                 title: displayName,
                 body: body,
-                actions: [],
+                actions: actions,
                 contentType: .keyValue
             )
         } catch {

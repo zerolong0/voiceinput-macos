@@ -15,6 +15,9 @@ struct HotkeyKeyOption: Identifiable {
 }
 
 enum HotkeyConfig {
+    static let defaultModifiers = 0
+    static let defaultKeyCode = 97
+
     static let modifierOptions: [HotkeyModifierOption] = [
         HotkeyModifierOption(id: "option", title: "Option", carbonFlags: optionKey),
         HotkeyModifierOption(id: "command", title: "Command", carbonFlags: cmdKey),
@@ -55,6 +58,13 @@ enum HotkeyConfig {
 
     static func keyTitle(for keyCode: Int) -> String {
         keyOptions.first(where: { $0.keyCode == keyCode })?.title ?? "KeyCode \(keyCode)"
+    }
+
+    static func displayString(modifiers: Int, keyCode: Int) -> String {
+        if modifiers == 0 {
+            return keyTitle(for: keyCode)
+        }
+        return "\(modifierTitle(for: modifiers)) + \(keyTitle(for: keyCode))"
     }
 
     static func carbonFlags(from modifiers: NSEvent.ModifierFlags) -> Int {
