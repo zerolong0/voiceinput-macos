@@ -43,6 +43,7 @@ final class AppHotkeyVoiceService: NSObject {
     private var didAttemptRecognitionRecovery = false
     private var insertionTargetElement: AXUIElement?
     private var insertionTargetPID: pid_t?
+    private let insertionRetryDelays: [TimeInterval] = [0.12, 0.28, 0.52]
 
     private let whisperEngine = WhisperEngine()
     private let textProcessor = TextProcessor()
@@ -692,8 +693,38 @@ final class AppHotkeyVoiceService: NSObject {
         logger.notice("Delivering result finalLength=\(finalText.count, privacy: .public)")
         RuntimeDiagnosticsStore.record("voice-input", "Deliver result length=\(finalText.count)")
         RealtimeSessionStore.shared.updateRewrittenText(finalText)
+        attemptResultInsertion(
+            originalText: originalText,
+            processedText: processedText,
+            finalText: finalText,
+            style: style,
+            note: note,
+            attemptIndex: 0
+        )
+    }
+
+    private func attemptResultInsertion(
+        originalText: String,
+        processedText: String,
+        finalText: String,
+        style: String,
+        note: String,
+        attemptIndex: Int
+    ) {
         if insertTextIntoFocusedApp(finalText) {
+            let finalNote = attemptIndex == 0 ? note : note + "|retry_\(attemptIndex)"
             finalizeInsertedResult(
+                originalText: originalText,
+                processedText: processedText,
+                finalText: finalText,
+                style: style,
+                note: finalNote
+            )
+            return
+        }
+
+        guard insertionTargetPID != nil, attemptIndex < insertionRetryDelays.count else {
+            finalizePendingCopyResult(
                 originalText: originalText,
                 processedText: processedText,
                 finalText: finalText,
@@ -703,40 +734,20 @@ final class AppHotkeyVoiceService: NSObject {
             return
         }
 
-        // Focus handoff back to the original app can lag slightly after the HUD/LLM phase.
-        if insertionTargetPID != nil {
-            RealtimeSessionStore.shared.setStage(.transcribing, text: "正在写入焦点位置")
-            RuntimeDiagnosticsStore.record("voice-input", "Primary insert missed, retrying delayed insert")
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
-                guard let self else { return }
-                if self.insertTextIntoFocusedApp(finalText) {
-                    self.finalizeInsertedResult(
-                        originalText: originalText,
-                        processedText: processedText,
-                        finalText: finalText,
-                        style: style,
-                        note: note + "|delayed_insert"
-                    )
-                } else {
-                    self.finalizePendingCopyResult(
-                        originalText: originalText,
-                        processedText: processedText,
-                        finalText: finalText,
-                        style: style,
-                        note: note
-                    )
-                }
-            }
-            return
+        let delay = insertionRetryDelays[attemptIndex]
+        RealtimeSessionStore.shared.setStage(.transcribing, text: "正在写入焦点位置")
+        RuntimeDiagnosticsStore.record("voice-input", "Insert attempt \(attemptIndex + 1) missed, retrying in \(String(format: "%.2f", delay))s")
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self else { return }
+            self.attemptResultInsertion(
+                originalText: originalText,
+                processedText: processedText,
+                finalText: finalText,
+                style: style,
+                note: note,
+                attemptIndex: attemptIndex + 1
+            )
         }
-
-        finalizePendingCopyResult(
-            originalText: originalText,
-            processedText: processedText,
-            finalText: finalText,
-            style: style,
-            note: note
-        )
     }
 
     private func finalizeInsertedResult(
@@ -805,7 +816,7 @@ final class AppHotkeyVoiceService: NSObject {
 
     private func insertTextIntoFocusedApp(_ text: String) -> Bool {
         activateInsertionTargetIfNeeded()
-        let axTargets = [focusedElement(), insertionTargetElement].compactMap { $0 }
+        let axTargets = candidateInsertionTargets()
         guard !axTargets.isEmpty else {
             RuntimeDiagnosticsStore.record("voice-input", "No AX target available for insertion")
             return false
@@ -813,7 +824,7 @@ final class AppHotkeyVoiceService: NSObject {
 
         for target in axTargets {
             if insertTextViaAX(text, into: target) {
-                RuntimeDiagnosticsStore.record("voice-input", "Inserted via AX path")
+                RuntimeDiagnosticsStore.record("voice-input", "Inserted via AX value path")
                 return true
             }
 
@@ -823,7 +834,7 @@ final class AppHotkeyVoiceService: NSObject {
             }
         }
 
-        guard let activeFocusedTarget = focusedElement() else {
+        guard let activeFocusedTarget = candidateInsertionTargets().first(where: { hasUsableInjectionTarget($0) }) else {
             RuntimeDiagnosticsStore.record("voice-input", "Paste fallback skipped because focused target disappeared")
             return false
         }
@@ -832,6 +843,7 @@ final class AppHotkeyVoiceService: NSObject {
 
     private func pasteTextViaCommandV(_ text: String, target: AXUIElement) -> Bool {
         guard hasUsableInjectionTarget(target) else { return false }
+        let baselineValue = readableAXValue(from: target)
         let pasteboard = NSPasteboard.general
         let original = pasteboard.string(forType: .string)
         pasteboard.clearContents()
@@ -850,23 +862,36 @@ final class AppHotkeyVoiceService: NSObject {
         vUp?.post(tap: .cghidEventTap)
         cmdUp?.post(tap: .cghidEventTap)
 
+        let verified = waitForPasteInsertion(of: text, target: target, baselineValue: baselineValue)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
             pasteboard.clearContents()
             if let original = original {
                 pasteboard.setString(original, forType: .string)
             }
         }
-        return true
+        RuntimeDiagnosticsStore.record("voice-input", verified ? "Paste fallback verified" : "Paste fallback could not be verified")
+        return verified
     }
 
     private func replaceSelectedTextViaAX(_ text: String, into element: AXUIElement) -> Bool {
+        guard let selectedRange = selectedTextRange(in: element), selectedRange.length > 0 else {
+            return false
+        }
+
         let selectedTextAttribute = kAXSelectedTextAttribute as CFString
         var isSettable = DarwinBoolean(false)
         let settableStatus = AXUIElementIsAttributeSettable(element, selectedTextAttribute, &isSettable)
         guard settableStatus == .success, isSettable.boolValue else {
             return false
         }
-        return AXUIElementSetAttributeValue(element, selectedTextAttribute, text as CFTypeRef) == .success
+        guard AXUIElementSetAttributeValue(element, selectedTextAttribute, text as CFTypeRef) == .success else {
+            return false
+        }
+
+        if let value = readableAXValue(from: element), value.contains(text) {
+            return true
+        }
+        return readableAXSelectedText(from: element) == text
     }
 
     private func focusedElement() -> AXUIElement? {
@@ -879,24 +904,56 @@ final class AppHotkeyVoiceService: NSObject {
         return (focused as! AXUIElement)
     }
 
+    private func candidateInsertionTargets() -> [AXUIElement] {
+        var seen = Set<CFHashCode>()
+        var targets: [AXUIElement] = []
+
+        func append(_ element: AXUIElement?) {
+            guard let element else { return }
+            let hash = CFHash(element)
+            guard !seen.contains(hash) else { return }
+            seen.insert(hash)
+            targets.append(element)
+        }
+
+        let primary = focusedElement()
+        append(primary)
+        append(insertionTargetElement)
+        for element in [primary, insertionTargetElement] {
+            for ancestor in ancestorTargets(from: element, depth: 3) {
+                append(ancestor)
+            }
+        }
+        return targets
+    }
+
+    private func ancestorTargets(from element: AXUIElement?, depth: Int) -> [AXUIElement] {
+        guard let element, depth > 0 else { return [] }
+        var result: [AXUIElement] = []
+        var current: AXUIElement? = element
+        for _ in 0..<depth {
+            guard let next = parentElement(of: current) else { break }
+            result.append(next)
+            current = next
+        }
+        return result
+    }
+
+    private func parentElement(of element: AXUIElement?) -> AXUIElement? {
+        guard let element else { return nil }
+        var parent: CFTypeRef?
+        let status = AXUIElementCopyAttributeValue(element, kAXParentAttribute as CFString, &parent)
+        guard status == .success, let parent else { return nil }
+        guard CFGetTypeID(parent) == AXUIElementGetTypeID() else { return nil }
+        return (parent as! AXUIElement)
+    }
+
     private func insertTextViaAX(_ text: String, into element: AXUIElement) -> Bool {
         guard isAXEditable(element) else { return false }
-
-        var valueRef: CFTypeRef?
-        let valueStatus = AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueRef)
-        guard valueStatus == .success, let valueRef, let currentValue = valueRef as? String else {
+        guard let currentValue = readableAXValue(from: element) else {
             return false
         }
-
-        var rangeRef: CFTypeRef?
-        let rangeStatus = AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &rangeRef)
-        guard rangeStatus == .success, let rangeRef, CFGetTypeID(rangeRef) == AXValueGetTypeID() else {
-            return false
-        }
-        let axRange = (rangeRef as! AXValue)
-
-        var selected = CFRange()
-        guard AXValueGetType(axRange) == .cfRange, AXValueGetValue(axRange, .cfRange, &selected) else {
+        guard let selected = selectedTextRange(in: element) else {
             return false
         }
 
@@ -910,9 +967,10 @@ final class AppHotkeyVoiceService: NSObject {
         guard setStatus == .success else { return false }
 
         var newCaret = CFRange(location: safeLocation + (text as NSString).length, length: 0)
-        guard let newAXRange = AXValueCreate(.cfRange, &newCaret) else { return true }
-        _ = AXUIElementSetAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, newAXRange)
-        return true
+        if let newAXRange = AXValueCreate(.cfRange, &newCaret) {
+            _ = AXUIElementSetAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, newAXRange)
+        }
+        return readableAXValue(from: element) == merged
     }
 
     private func isAXEditable(_ element: AXUIElement) -> Bool {
@@ -981,6 +1039,57 @@ final class AppHotkeyVoiceService: NSObject {
             return false
         }
         return isAXEditable(element)
+    }
+
+    private func readableAXValue(from element: AXUIElement) -> String? {
+        var valueRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueRef) == .success else {
+            return nil
+        }
+        if let string = valueRef as? String {
+            return string
+        }
+        if let attributed = valueRef as? NSAttributedString {
+            return attributed.string
+        }
+        return nil
+    }
+
+    private func readableAXSelectedText(from element: AXUIElement) -> String? {
+        var selectedRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXSelectedTextAttribute as CFString, &selectedRef) == .success else {
+            return nil
+        }
+        return selectedRef as? String
+    }
+
+    private func selectedTextRange(in element: AXUIElement) -> CFRange? {
+        var rangeRef: CFTypeRef?
+        let rangeStatus = AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &rangeRef)
+        guard rangeStatus == .success, let rangeRef, CFGetTypeID(rangeRef) == AXValueGetTypeID() else {
+            return nil
+        }
+        let axRange = rangeRef as! AXValue
+        var selected = CFRange()
+        guard AXValueGetType(axRange) == .cfRange, AXValueGetValue(axRange, .cfRange, &selected) else {
+            return nil
+        }
+        return selected
+    }
+
+    private func waitForPasteInsertion(of text: String, target: AXUIElement, baselineValue: String?) -> Bool {
+        for _ in 0..<10 {
+            RunLoop.current.run(until: Date().addingTimeInterval(0.04))
+            let candidateTarget = focusedElement() ?? target
+            let newValue = readableAXValue(from: candidateTarget)
+            if let baselineValue, let newValue, newValue != baselineValue, newValue.contains(text) {
+                return true
+            }
+            if baselineValue == nil, let newValue, newValue.contains(text) {
+                return true
+            }
+        }
+        return false
     }
 
     private func copyPendingTextToClipboard() {

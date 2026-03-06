@@ -49,6 +49,8 @@ final class InputStatusPanel {
     private var closeTopConstraint: NSLayoutConstraint?
     private var iconCenterYConstraint: NSLayoutConstraint?
     private var iconTopConstraint: NSLayoutConstraint?
+    private var copyCenterYConstraint: NSLayoutConstraint?
+    private var copyBottomConstraint: NSLayoutConstraint?
     private var titleTrailingToCardConstraint: NSLayoutConstraint?
     private var titleTrailingToCopyConstraint: NSLayoutConstraint?
     private var titleTrailingToCloseConstraint: NSLayoutConstraint?
@@ -167,6 +169,10 @@ final class InputStatusPanel {
         iconTopConstraint = iconView.topAnchor.constraint(equalTo: card.topAnchor, constant: 15)
         iconTopConstraint?.isActive = false
         iconCenterYConstraint?.isActive = true
+        copyCenterYConstraint = copyButton.centerYAnchor.constraint(equalTo: card.centerYAnchor)
+        copyBottomConstraint = copyButton.bottomAnchor.constraint(equalTo: card.bottomAnchor, constant: -12)
+        copyBottomConstraint?.isActive = false
+        copyCenterYConstraint?.isActive = true
         titleTrailingToCardConstraint = titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: card.trailingAnchor, constant: -12)
         titleTrailingToCopyConstraint = titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: copyButton.leadingAnchor, constant: -8)
         titleTrailingToCloseConstraint = titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: closeButton.leadingAnchor, constant: -8)
@@ -209,7 +215,8 @@ final class InputStatusPanel {
             subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 6),
 
             copyButton.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -8),
-            copyButton.centerYAnchor.constraint(equalTo: card.centerYAnchor),
+            copyCenterYConstraint!,
+            copyBottomConstraint!,
             copyButton.heightAnchor.constraint(equalToConstant: 22),
 
             closeButton.trailingAnchor.constraint(equalTo: card.trailingAnchor, constant: -8),
@@ -313,6 +320,10 @@ final class InputStatusPanel {
         closeTopConstraint?.isActive = true
         iconCenterYConstraint?.isActive = false
         iconTopConstraint?.isActive = true
+        copyCenterYConstraint?.isActive = false
+        copyBottomConstraint?.isActive = true
+        copyCenterYConstraint?.isActive = false
+        copyBottomConstraint?.isActive = true
 
         iconView.image = NSImage(systemSymbolName: "doc.on.doc", accessibilityDescription: nil)
         iconView.contentTintColor = .controlAccentColor
@@ -348,12 +359,6 @@ final class InputStatusPanel {
         if !panel.isVisible {
             panel.orderFrontRegardless()
         }
-
-        // Position copy button at bottom-right in expanded mode
-        copyButton.setFrameOrigin(NSPoint(
-            x: frame.size.width - copyButton.frame.width - 12,
-            y: 12
-        ))
     }
 
     func showError(_ text: String) {
@@ -383,6 +388,8 @@ final class InputStatusPanel {
         closeCenterYConstraint?.isActive = true
         iconTopConstraint?.isActive = false
         iconCenterYConstraint?.isActive = true
+        copyBottomConstraint?.isActive = false
+        copyCenterYConstraint?.isActive = true
 
         let compactText = displayedText(for: stage, rawText: text)
         titleLabel.stringValue = compactText.isEmpty ? " " : compactText
@@ -515,18 +522,40 @@ final class InputStatusPanel {
 
     private func visibleTextForListening(_ text: String) -> String {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return "请开始说话，松开结束" }
+        guard !trimmed.isEmpty else { return "请开始说话" }
+        return trailingViewportText(trimmed)
+    }
+
+    private func trailingViewportText(_ text: String) -> String {
         let font = NSFont.systemFont(ofSize: 15, weight: .semibold)
         let attrs: [NSAttributedString.Key: Any] = [.font: font]
         let viewport = ("汉汉汉汉汉汉汉汉汉汉" as NSString).size(withAttributes: attrs).width
-        var chars = Array(trimmed)
-        while !chars.isEmpty {
-            let candidate = String(chars.suffix(chars.count))
-            let width = (candidate as NSString).size(withAttributes: attrs).width
-            if width <= viewport { return candidate }
-            chars.removeFirst()
+        let ellipsis = "…"
+        let ellipsisWidth = (ellipsis as NSString).size(withAttributes: attrs).width
+        let characters = Array(text)
+        guard !characters.isEmpty else { return "" }
+
+        var visible = String(characters)
+        if (visible as NSString).size(withAttributes: attrs).width <= viewport {
+            return visible
         }
-        return String(trimmed.suffix(1))
+
+        var start = characters.count - 1
+        visible = String(characters[start...])
+        while start > 0 {
+            let previousStart = start - 1
+            let candidate = String(characters[previousStart...])
+            let candidateWidth = (candidate as NSString).size(withAttributes: attrs).width
+            if candidateWidth + ellipsisWidth > viewport {
+                break
+            }
+            start -= 1
+            visible = candidate
+        }
+
+        let compactVisible = visible.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard start > 0 else { return compactVisible }
+        return ellipsis + compactVisible
     }
 
     private func calculatedHeight(for text: String, isError: Bool) -> CGFloat {
