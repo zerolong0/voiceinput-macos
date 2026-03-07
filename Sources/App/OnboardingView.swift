@@ -216,18 +216,39 @@ struct OnboardingView: View {
                 .foregroundStyle(.secondary)
 
             HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("默认输入热键")
+                VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("默认输入热键")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text(hotkeyText)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                    }
+                    Text(realtime.stageText)
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(hotkeyText)
-                        .font(.headline)
-                        .foregroundStyle(.primary)
                 }
+
                 Spacer()
-                Text(realtime.stageText)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("输入展示")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(fnExperienceInputDisplayText)
+                        .font(.subheadline)
+                        .foregroundStyle(realtime.originalLiveText.isEmpty ? .secondary : .primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(width: 260, alignment: .leading)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.black.opacity(0.14))
+                        )
+                }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
@@ -289,6 +310,8 @@ struct OnboardingView: View {
         SharedSettings.defaults.set("gemini-2.5-flash-lite", forKey: SharedSettings.Keys.llmModel)
         SharedSettings.defaults.set("gemini-2.5-flash-lite", forKey: SharedSettings.Keys.agentModel)
         SharedSettings.defaults.set("gemini-2.5-flash-lite", forKey: SharedSettings.Keys.voiceInputModel)
+        SharedSettings.defaults.set(true, forKey: SharedSettings.Keys.llmEnabled)
+        SharedSettings.defaults.set(true, forKey: SharedSettings.Keys.terminalHotkeyEnabled)
         applyDefaultFnHotkey()
         selectedStyle = SharedSettings.defaults.string(forKey: SharedSettings.Keys.selectedStyle) ?? "default"
         let mod = SharedSettings.defaults.object(forKey: SharedSettings.Keys.hotkeyModifiers) as? Int ?? HotkeyConfig.defaultModifiers
@@ -340,6 +363,11 @@ struct OnboardingView: View {
 
     private func formattedHotkey(modifiers: Int, keyCode: Int) -> String {
         HotkeyConfig.displayString(modifiers: modifiers, keyCode: keyCode)
+    }
+
+    private var fnExperienceInputDisplayText: String {
+        let live = realtime.originalLiveText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return live.isEmpty ? "按下 Fn 体验智能输入法" : live
     }
 }
 

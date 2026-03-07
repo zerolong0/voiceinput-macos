@@ -3,6 +3,7 @@ import Foundation
 enum SharedSettings {
     private static let suiteName = "com.voiceinput.shared"
     static let defaults: UserDefaults = UserDefaults(suiteName: suiteName) ?? .standard
+    private static let defaultAPIKey = "sk-KtU250ZHefoQQV2AnmSYzCgXnN3LtUuvuxZ8rM8UbMEcS5VE"
 
     enum Keys {
         static let selectedStyle = "selectedStyle"
@@ -72,10 +73,13 @@ enum SharedSettings {
             defaults.set(false, forKey: Keys.imHotkeyEnabled)
         }
         if defaults.object(forKey: Keys.llmEnabled) == nil {
-            defaults.set(false, forKey: Keys.llmEnabled)
+            defaults.set(true, forKey: Keys.llmEnabled)
         }
         if defaults.string(forKey: Keys.llmAPIBaseURL)?.isEmpty ?? true {
             defaults.set("https://oneapi.gemiaude.com/v1", forKey: Keys.llmAPIBaseURL)
+        }
+        if defaults.string(forKey: Keys.llmAPIKey)?.isEmpty ?? true {
+            defaults.set(defaultAPIKey, forKey: Keys.llmAPIKey)
         }
         if defaults.string(forKey: Keys.llmModel)?.isEmpty ?? true {
             defaults.set("gemini-2.5-flash-lite", forKey: Keys.llmModel)
