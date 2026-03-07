@@ -49,7 +49,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let contentView = OnboardingView(
             onComplete: {
                 UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-                self.showWorkspaceWindow()
+                DispatchQueue.main.async { [weak self] in
+                    self?.showWorkspaceWindow()
+                }
             }
         )
 
@@ -59,6 +61,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
+        window?.animationBehavior = .none
         window?.title = "欢迎使用 VoiceInput"
         window?.contentView = NSHostingView(rootView: contentView)
         window?.center()
@@ -67,21 +70,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func showWorkspaceWindow() {
-        window?.close()
         let rootView = MainWorkspaceView()
-
-        window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1100, height: 720),
-            styleMask: [.titled, .closable, .miniaturizable],
-            backing: .buffered,
-            defer: false
-        )
-        window?.title = "VoiceInput"
-        window?.toolbar = nil
-        window?.contentView = NSHostingView(rootView: rootView)
-        window?.center()
-        window?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        if let existingWindow = window {
+            // Reuse existing window to avoid deallocating window hierarchy during
+            // onboarding button action, which can trigger AppKit autorelease crashes.
+            existingWindow.animationBehavior = .none
+            existingWindow.title = "VoiceInput"
+            existingWindow.toolbar = nil
+            existingWindow.setContentSize(NSSize(width: 1100, height: 720))
+            existingWindow.contentView = NSHostingView(rootView: rootView)
+            existingWindow.center()
+            existingWindow.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        } else {
+            window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 1100, height: 720),
+                styleMask: [.titled, .closable, .miniaturizable],
+                backing: .buffered,
+                defer: false
+            )
+            window?.animationBehavior = .none
+            window?.title = "VoiceInput"
+            window?.toolbar = nil
+            window?.contentView = NSHostingView(rootView: rootView)
+            window?.center()
+            window?.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+        }
     }
 
     /// 对 .notDetermined 状态的权限主动发起请求，重编译后系统若已授权会自动通过
@@ -124,6 +139,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
+        window?.animationBehavior = .none
         window?.title = "VoiceInput - 权限修复"
         window?.contentView = NSHostingView(rootView: contentView)
         window?.center()

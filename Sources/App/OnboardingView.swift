@@ -6,7 +6,7 @@ private enum OnboardingStep: Int, CaseIterable {
     case permissionCore
     case permissionAccessibility
     case style
-    case hotkey
+    case fnExperience
     case done
 
     var title: String {
@@ -14,7 +14,7 @@ private enum OnboardingStep: Int, CaseIterable {
         case .permissionCore: return "1. 麦克风与语音识别"
         case .permissionAccessibility: return "2. 辅助功能"
         case .style: return "3. 输入风格"
-        case .hotkey: return "4. 快捷键"
+        case .fnExperience: return "4. Fn 首次体验"
         case .done: return "5. 完成"
         }
     }
@@ -23,15 +23,16 @@ private enum OnboardingStep: Int, CaseIterable {
 struct OnboardingView: View {
     let onComplete: () -> Void
 
+    @ObservedObject private var realtime = RealtimeSessionStore.shared
     @State private var step: OnboardingStep = .permissionCore
     @State private var micGranted = false
     @State private var speechGranted = false
     @State private var accessibilityGranted = false
     @State private var selectedStyle = "default"
-    @State private var hotkeyText = "Option + 1"
-    @State private var isCapturingHotkey = false
-    @State private var hotkeyCaptureHint = "点击下方快捷键框后，直接按键盘录入"
-    @State private var localKeyMonitor: Any?
+    @State private var hotkeyText = "Fn"
+    @State private var didFinishFnExperience = false
+    @State private var fnExperienceHint = "按住 Fn 开始说话，松开 Fn 自动结束并进入改写。"
+    @State private var permissionPollTimer: Timer?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -86,12 +87,19 @@ struct OnboardingView: View {
             syncPermissions()
             startPolling()
         }
+        .onDisappear {
+            stopPolling()
+        }
+        .onChange(of: realtime.updatedAt) { _ in
+            guard step == .fnExperience else { return }
+            if realtime.stage == .rewriting || realtime.stage == .inserted || realtime.stage == .pendingCopy {
+                didFinishFnExperience = true
+                fnExperienceHint = "体验完成：你已经触发了“按住 Fn 说话，松开改写”。"
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             syncPermissions()
             startPolling()
-        }
-        .onDisappear {
-            stopHotkeyCapture()
         }
     }
 
@@ -104,8 +112,8 @@ struct OnboardingView: View {
             accessibilityPermissionPage
         case .style:
             stylePage
-        case .hotkey:
-            hotkeyPage
+        case .fnExperience:
+            fnExperiencePage
         case .done:
             donePage
         }
@@ -117,6 +125,8 @@ struct OnboardingView: View {
             return micGranted && speechGranted
         case .permissionAccessibility:
             return accessibilityGranted
+        case .fnExperience:
+            return didFinishFnExperience
         default:
             return true
         }
@@ -200,78 +210,49 @@ struct OnboardingView: View {
         }
     }
 
-    private var hotkeyPage: some View {
+    private var fnExperiencePage: some View {
         OnboardingCard {
-            Text("默认热键是 Option + 1，用于语音输入。Voice Agent 默认使用 Option + 2。快捷键仍支持单键和双键组合，用户后续可以自行修改。按住说话，松开结束。")
+            Text("这一页只做一件事：完成一次 Fn 输入体验。")
                 .foregroundStyle(.secondary)
 
-            Button {
-                if isCapturingHotkey {
-                    stopHotkeyCapture()
-                } else {
-                    startHotkeyCapture()
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("默认输入热键")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(hotkeyText)
+                        .font(.headline)
+                        .foregroundStyle(.primary)
                 }
-            } label: {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("当前热键")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Text(isCapturingHotkey ? "请按下快捷键..." : hotkeyText)
-                            .font(.headline)
-                            .foregroundStyle(.primary)
-                    }
-                    Spacer()
-                    Image(systemName: isCapturingHotkey ? "keyboard.badge.ellipsis" : "keyboard")
-                        .foregroundStyle(Color.accentColor)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(Color.secondary.opacity(0.12))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(isCapturingHotkey ? Color.accentColor : Color.clear, lineWidth: 1.5)
-                )
+                Spacer()
+                Text(realtime.stageText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.secondary.opacity(0.12))
+            )
 
-            Text(hotkeyCaptureHint)
+            Text(fnExperienceHint)
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 10) {
-                Button("推荐默认（Option + 1）") {
-                    SharedSettings.defaults.set(true, forKey: SharedSettings.Keys.hotkeyEnabled)
-                    SharedSettings.defaults.set(HotkeyConfig.defaultModifiers, forKey: SharedSettings.Keys.hotkeyModifiers)
-                    SharedSettings.defaults.set(HotkeyConfig.defaultKeyCode, forKey: SharedSettings.Keys.hotkeyKeyCode)
-                    hotkeyText = "Option + 1"
-                    hotkeyCaptureHint = "已设置默认热键：Option + 1"
-                    DistributedNotificationCenter.default().postNotificationName(
-                        Notification.Name(SharedNotifications.hotkeyChanged),
-                        object: nil,
-                        userInfo: nil,
-                        deliverImmediately: true
-                    )
-                }
-                .buttonStyle(.bordered)
-
-                Button("示例单键（保留支持）") {
-                    SharedSettings.defaults.set(true, forKey: SharedSettings.Keys.hotkeyEnabled)
-                    SharedSettings.defaults.set(0, forKey: SharedSettings.Keys.hotkeyModifiers)
-                    SharedSettings.defaults.set(97, forKey: SharedSettings.Keys.hotkeyKeyCode)
-                    hotkeyText = "F6"
-                    hotkeyCaptureHint = "已设置示例单键：F6"
-                    DistributedNotificationCenter.default().postNotificationName(
-                        Notification.Name(SharedNotifications.hotkeyChanged),
-                        object: nil,
-                        userInfo: nil,
-                        deliverImmediately: true
-                    )
+                Button(realtime.stage == .listening || realtime.stage == .transcribing ? "停止体验" : "开始 Fn 体验") {
+                    AppHotkeyVoiceService.shared.toggleFromUI()
                 }
                 .buttonStyle(.borderedProminent)
+
+                if !didFinishFnExperience {
+                    Button("我已了解，继续") {
+                        didFinishFnExperience = true
+                        fnExperienceHint = "已跳过实际语音体验，可在首页立即开始使用。"
+                    }
+                    .buttonStyle(.bordered)
+                }
             }
         }
     }
@@ -292,6 +273,7 @@ struct OnboardingView: View {
             SharedSettings.defaults.set(selectedStyle, forKey: SharedSettings.Keys.selectedStyle)
         }
         if step == .done {
+            applyDefaultFnHotkey()
             onComplete()
             return
         }
@@ -300,17 +282,31 @@ struct OnboardingView: View {
 
     private func move(_ delta: Int) {
         let next = max(0, min(OnboardingStep.done.rawValue, step.rawValue + delta))
-        withAnimation(.easeInOut(duration: 0.2)) {
-            step = OnboardingStep(rawValue: next) ?? .permissionCore
-        }
+        step = OnboardingStep(rawValue: next) ?? .permissionCore
     }
 
     private func resetInitialConfig() {
         SharedSettings.defaults.set("gemini-2.5-flash-lite", forKey: SharedSettings.Keys.llmModel)
+        SharedSettings.defaults.set("gemini-2.5-flash-lite", forKey: SharedSettings.Keys.agentModel)
+        SharedSettings.defaults.set("gemini-2.5-flash-lite", forKey: SharedSettings.Keys.voiceInputModel)
+        applyDefaultFnHotkey()
         selectedStyle = SharedSettings.defaults.string(forKey: SharedSettings.Keys.selectedStyle) ?? "default"
         let mod = SharedSettings.defaults.object(forKey: SharedSettings.Keys.hotkeyModifiers) as? Int ?? HotkeyConfig.defaultModifiers
         let code = SharedSettings.defaults.object(forKey: SharedSettings.Keys.hotkeyKeyCode) as? Int ?? HotkeyConfig.defaultKeyCode
         hotkeyText = formattedHotkey(modifiers: mod, keyCode: code)
+    }
+
+    private func applyDefaultFnHotkey() {
+        SharedSettings.defaults.set(true, forKey: SharedSettings.Keys.hotkeyEnabled)
+        SharedSettings.defaults.set(HotkeyConfig.functionModifierFlag, forKey: SharedSettings.Keys.hotkeyModifiers)
+        SharedSettings.defaults.set(63, forKey: SharedSettings.Keys.hotkeyKeyCode)
+        SharedSettings.defaults.set("Fn", forKey: SharedSettings.Keys.hotkeyRuntimeStatus)
+        DistributedNotificationCenter.default().postNotificationName(
+            Notification.Name(SharedNotifications.hotkeyChanged),
+            object: nil,
+            userInfo: nil,
+            deliverImmediately: true
+        )
     }
 
     private func syncPermissions() {
@@ -320,70 +316,30 @@ struct OnboardingView: View {
     }
 
     private func startPolling() {
+        stopPolling()
         var count = 0
-        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
+        permissionPollTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
             syncPermissions()
             count += 1
             if count > 20 || (micGranted && speechGranted && accessibilityGranted) {
                 timer.invalidate()
+                if permissionPollTimer === timer {
+                    permissionPollTimer = nil
+                }
             }
+        }
+        if let timer = permissionPollTimer {
+            RunLoop.main.add(timer, forMode: .common)
         }
     }
 
-    private func startHotkeyCapture() {
-        stopHotkeyCapture()
-        isCapturingHotkey = true
-        hotkeyCaptureHint = "正在录入，按下任意键完成（Esc 取消）"
-
-        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
-            guard isCapturingHotkey else { return event }
-            if event.keyCode == 53 {
-                hotkeyCaptureHint = "已取消录入"
-                stopHotkeyCapture()
-                return nil
-            }
-
-            let modifiers = event.modifierFlags.intersection([.option, .command, .control, .shift, .function])
-            let modifierFlags = HotkeyConfig.carbonFlags(from: modifiers)
-            let keyCode = Int(event.keyCode)
-            let validation = HotkeyConfig.validate(modifiers: modifierFlags, keyCode: keyCode)
-
-            guard validation.isValid else {
-                hotkeyCaptureHint = validation.message ?? "快捷键无效"
-                return nil
-            }
-
-            SharedSettings.defaults.set(true, forKey: SharedSettings.Keys.hotkeyEnabled)
-            SharedSettings.defaults.set(modifierFlags, forKey: SharedSettings.Keys.hotkeyModifiers)
-            SharedSettings.defaults.set(keyCode, forKey: SharedSettings.Keys.hotkeyKeyCode)
-            hotkeyText = formattedHotkey(modifiers: modifierFlags, keyCode: keyCode)
-            hotkeyCaptureHint = "已保存：\(hotkeyText)"
-            DistributedNotificationCenter.default().postNotificationName(
-                Notification.Name(SharedNotifications.hotkeyChanged),
-                object: nil,
-                userInfo: nil,
-                deliverImmediately: true
-            )
-            stopHotkeyCapture()
-            return nil
-        }
-    }
-
-    private func stopHotkeyCapture() {
-        isCapturingHotkey = false
-        if let monitor = localKeyMonitor {
-            NSEvent.removeMonitor(monitor)
-            localKeyMonitor = nil
-        }
+    private func stopPolling() {
+        permissionPollTimer?.invalidate()
+        permissionPollTimer = nil
     }
 
     private func formattedHotkey(modifiers: Int, keyCode: Int) -> String {
-        let modTitle = HotkeyConfig.modifierTitle(for: modifiers)
-        let keyTitle = HotkeyConfig.keyTitle(for: keyCode)
-        if modTitle == "无修饰键" {
-            return keyTitle
-        }
-        return "\(modTitle) + \(keyTitle)"
+        HotkeyConfig.displayString(modifiers: modifiers, keyCode: keyCode)
     }
 }
 

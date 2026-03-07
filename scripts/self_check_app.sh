@@ -5,6 +5,7 @@ APP_BUNDLE_ID="com.voiceinput.macos"
 SUITE_NAME="com.voiceinput.shared"
 DIAG_KEY="runtimeDiagnostics.events"
 VOICE_INPUT_TEXT="【Codex自测】自动输入成功"
+PROJECT_ROOT="/Users/zerolong/Documents/AICODE/best/InputLess/voiceinput-macos"
 
 clear_diagnostics() {
   defaults write "${SUITE_NAME}" "${DIAG_KEY}" -array
@@ -48,6 +49,108 @@ assert_contains() {
     echo "SELF-CHECK FAILED: ${message}" >&2
     exit 1
   fi
+}
+
+app_window_title() {
+  osascript <<'APPLESCRIPT' 2>/dev/null || true
+tell application "System Events"
+    if not (exists process "VoiceInput") then return ""
+    tell process "VoiceInput"
+        if (count of windows) is 0 then return ""
+        try
+            return value of attribute "AXTitle" of window 1
+        on error
+            return ""
+        end try
+    end tell
+end tell
+APPLESCRIPT
+}
+
+wait_for_window_title() {
+  local expected="$1"
+  local retries=30
+  local title=""
+  while (( retries > 0 )); do
+    title="$(app_window_title)"
+    if [[ "${title}" == "${expected}" ]]; then
+      echo "${title}"
+      return 0
+    fi
+    sleep 0.2
+    ((retries--))
+  done
+  echo "${title}"
+  return 1
+}
+
+run_onboarding_check() {
+  echo "== Onboarding Self Check =="
+
+  osascript -e 'tell application "VoiceInput" to quit' 2>/dev/null || true
+  pkill -x VoiceInput 2>/dev/null || true
+  sleep 0.8
+
+  defaults delete com.voiceinput.macos hasCompletedOnboarding 2>/dev/null || true
+  defaults delete NSGlobalDomain hasCompletedOnboarding 2>/dev/null || true
+  defaults delete "${SUITE_NAME}" hotkeyModifiers 2>/dev/null || true
+  defaults delete "${SUITE_NAME}" hotkeyKeyCode 2>/dev/null || true
+  defaults delete "${SUITE_NAME}" llmModel 2>/dev/null || true
+  defaults delete "${SUITE_NAME}" agentModel 2>/dev/null || true
+  defaults delete "${SUITE_NAME}" voiceInputModel 2>/dev/null || true
+  killall cfprefsd 2>/dev/null || true
+
+  open -b "${APP_BUNDLE_ID}"
+
+  local onboarding_title
+  onboarding_title="$(wait_for_window_title "欢迎使用 VoiceInput")" || {
+    echo "SELF-CHECK FAILED: onboarding window not shown, got title: ${onboarding_title}" >&2
+    exit 1
+  }
+  echo "Onboarding window title: ${onboarding_title}"
+
+  local step_count
+  step_count="$(sed -n '/private enum OnboardingStep/,/var title/p' "${PROJECT_ROOT}/Sources/App/OnboardingView.swift" | rg -n 'case ' | wc -l | tr -d ' ')"
+  [[ "${step_count}" == "5" ]] || {
+    echo "SELF-CHECK FAILED: expected 5 onboarding steps, got ${step_count}" >&2
+    exit 1
+  }
+  echo "Onboarding step count: ${step_count}"
+
+  local hk_mod hk_code hk_status m_llm m_agent m_voice
+  hk_mod="$(defaults read "${SUITE_NAME}" hotkeyModifiers 2>/dev/null || echo "")"
+  hk_code="$(defaults read "${SUITE_NAME}" hotkeyKeyCode 2>/dev/null || echo "")"
+  hk_status="$(defaults read "${SUITE_NAME}" hotkeyRuntimeStatus 2>/dev/null || echo "")"
+  m_llm="$(defaults read "${SUITE_NAME}" llmModel 2>/dev/null || echo "")"
+  m_agent="$(defaults read "${SUITE_NAME}" agentModel 2>/dev/null || echo "")"
+  m_voice="$(defaults read "${SUITE_NAME}" voiceInputModel 2>/dev/null || echo "")"
+
+  [[ "${hk_mod}" == "8388608" || "${hk_mod}" == "131072" ]] || {
+    echo "SELF-CHECK FAILED: onboarding default hotkey modifier should be Fn-like flag (8388608/131072), got ${hk_mod}" >&2
+    exit 1
+  }
+  [[ "${hk_code}" == "63" ]] || {
+    echo "SELF-CHECK FAILED: onboarding default hotkey keyCode should be 63(Fn), got ${hk_code}" >&2
+    exit 1
+  }
+  [[ "${hk_status}" == *"Fn"* ]] || {
+    echo "SELF-CHECK FAILED: onboarding hotkey runtime status should contain Fn, got ${hk_status}" >&2
+    exit 1
+  }
+  [[ "${m_llm}" == "gemini-2.5-flash-lite" ]] || {
+    echo "SELF-CHECK FAILED: llmModel default mismatch: ${m_llm}" >&2
+    exit 1
+  }
+  [[ "${m_agent}" == "gemini-2.5-flash-lite" ]] || {
+    echo "SELF-CHECK FAILED: agentModel default mismatch: ${m_agent}" >&2
+    exit 1
+  }
+  [[ "${m_voice}" == "gemini-2.5-flash-lite" ]] || {
+    echo "SELF-CHECK FAILED: voiceInputModel default mismatch: ${m_voice}" >&2
+    exit 1
+  }
+
+  echo "Onboarding defaults: hotkey=Fn(63), models=gemini-2.5-flash-lite"
 }
 
 run_voice_input_check() {
@@ -111,6 +214,7 @@ run_voice_agent_check() {
   assert_contains "${diagnostics}" "Debug demo finished result" "voice agent result state missing"
 }
 
+run_onboarding_check
 run_voice_input_check
 run_voice_agent_check
 
