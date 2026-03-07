@@ -122,6 +122,11 @@ enum HotkeyConfig {
         }
     }
 
+    static func isFunctionRowKeyCode(_ keyCode: Int) -> Bool {
+        // F1...F20 virtual keycode range on macOS keyboards.
+        return (96...113).contains(keyCode)
+    }
+
     static func validate(modifiers: Int, keyCode: Int) -> (isValid: Bool, message: String?) {
         if keyCode < 0 {
             return (false, "无效按键")

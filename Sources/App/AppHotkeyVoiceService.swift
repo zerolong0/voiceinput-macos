@@ -31,6 +31,7 @@ final class AppHotkeyVoiceService: NSObject {
     private var activeTerminalHotkeyKeyCode: UInt32 = 49
     private var eventTapHandlesHotkeys = true
     private var keyTapAvailable = false
+    private var isFunctionModifierPressed = false
     private var isVoiceInputActive = false
     private var currentText = ""
     private var isStoppingRecording = false
@@ -135,6 +136,7 @@ final class AppHotkeyVoiceService: NSObject {
         let hotkeyEnabled = defaults.object(forKey: SharedSettings.Keys.hotkeyEnabled) as? Bool ?? true
         guard hotkeyEnabled else {
             updateHotkeyRuntimeStatus("已关闭")
+            registerTerminalHotkeyIfEnabled()
             return
         }
 
@@ -154,6 +156,7 @@ final class AppHotkeyVoiceService: NSObject {
         if primaryStatus == noErr {
             activeHotkeyKeyCode = UInt32(keyCode)
             activeHotkeyModifiers = UInt32(modifiers)
+            refreshEventTapHandlingPolicy()
             setupKeyConsumeTap()
             setupKeyEventMonitors()
             updateHotkeyRuntimeStatus("已注册: \(formattedHotkey(modifiers: modifiers, keyCode: keyCode))")
@@ -164,6 +167,7 @@ final class AppHotkeyVoiceService: NSObject {
         updateHotkeyRuntimeStatus("热键注册失败（可能冲突）: status=\(primaryStatus)")
         activeHotkeyKeyCode = UInt32(keyCode)
         activeHotkeyModifiers = UInt32(modifiers)
+        refreshEventTapHandlingPolicy()
         setupKeyConsumeTap()
         setupKeyEventMonitors()
         registerTerminalHotkeyIfEnabled()
@@ -177,7 +181,11 @@ final class AppHotkeyVoiceService: NSObject {
 
         let defaults = SharedSettings.defaults
         let enabled = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyEnabled) as? Bool ?? false
-        guard enabled else { return }
+        guard enabled else {
+            updateTerminalHotkeyRuntimeStatus("已关闭")
+            refreshEventTapHandlingPolicy()
+            return
+        }
 
         let modifiers = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyModifiers) as? Int ?? HotkeyConfig.defaultTerminalModifiers
         let keyCode = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyKeyCode) as? Int ?? HotkeyConfig.defaultTerminalKeyCode
@@ -199,7 +207,11 @@ final class AppHotkeyVoiceService: NSObject {
         )
         if status == noErr {
             terminalHotkeyRef = newRef
+            updateTerminalHotkeyRuntimeStatus("已注册: \(formattedHotkey(modifiers: modifiers, keyCode: keyCode))")
+        } else {
+            updateTerminalHotkeyRuntimeStatus("热键注册失败（可能冲突）: status=\(status)")
         }
+        refreshEventTapHandlingPolicy()
     }
 
     private func installHotkeyHandler() {
@@ -340,6 +352,7 @@ final class AppHotkeyVoiceService: NSObject {
             keyConsumeTap = nil
         }
         keyTapAvailable = false
+        isFunctionModifierPressed = false
     }
 
     private func setupKeyEventMonitors() {
@@ -349,8 +362,8 @@ final class AppHotkeyVoiceService: NSObject {
             self?.handleMonitoredKeyEvent(event)
         }
 
-        globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown, .keyUp], handler: handler)
-        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] event in
+        globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown, .keyUp, .flagsChanged], handler: handler)
+        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp, .flagsChanged]) { [weak self] event in
             self?.handleMonitoredKeyEvent(event)
             return event
         }
@@ -368,42 +381,140 @@ final class AppHotkeyVoiceService: NSObject {
     }
 
     private func handleMonitoredKeyEvent(_ event: NSEvent) {
-        guard shouldUseMonitorFallback(for: event) else { return }
+        let fnPressedForCurrentEvent = (event.type == .flagsChanged && Int(event.keyCode) == 63)
+            ? event.modifierFlags.contains(.function)
+            : (isFunctionModifierPressed || event.modifierFlags.contains(.function))
 
-        if matchesHotkey(event, keyCode: activeHotkeyKeyCode, modifiers: activeHotkeyModifiers) {
-            if event.type == .keyDown {
-                handleHotkeyPressed()
-            } else if event.type == .keyUp {
-                handleHotkeyReleased()
+        if handleModifierOnlyFlagsChanged(
+            event,
+            keyCode: activeHotkeyKeyCode,
+            modifiers: activeHotkeyModifiers,
+            onPressed: { [weak self] in self?.handleHotkeyPressed() },
+            onReleased: { [weak self] in self?.handleHotkeyReleased() }
+        ) {
+            if event.type == .flagsChanged, Int(event.keyCode) == 63 {
+                isFunctionModifierPressed = event.modifierFlags.contains(.function)
             }
             return
         }
 
         let terminalEnabled = SharedSettings.defaults.object(forKey: SharedSettings.Keys.terminalHotkeyEnabled) as? Bool ?? false
-        guard terminalEnabled else { return }
-        guard matchesHotkey(event, keyCode: activeTerminalHotkeyKeyCode, modifiers: activeTerminalHotkeyModifiers) else { return }
+        if terminalEnabled,
+           handleModifierOnlyFlagsChanged(
+            event,
+            keyCode: activeTerminalHotkeyKeyCode,
+            modifiers: activeTerminalHotkeyModifiers,
+            onPressed: { VoiceTerminalService.shared.handleHotkeyPressed() },
+            onReleased: { VoiceTerminalService.shared.handleHotkeyReleased() }
+           ) {
+            if event.type == .flagsChanged, Int(event.keyCode) == 63 {
+                isFunctionModifierPressed = event.modifierFlags.contains(.function)
+            }
+            return
+        }
 
-        if event.type == .keyDown {
+        if event.type == .flagsChanged,
+           Int(event.keyCode) == 63 {
+            isFunctionModifierPressed = event.modifierFlags.contains(.function)
+        }
+
+        guard shouldUseMonitorFallback(for: event) else { return }
+
+        if matchesHotkey(
+            event,
+            keyCode: activeHotkeyKeyCode,
+            modifiers: activeHotkeyModifiers,
+            functionPressedForEvent: fnPressedForCurrentEvent
+        ) {
+            if event.type == .keyDown || (event.type == .flagsChanged && isModifierPressEvent(event)) {
+                handleHotkeyPressed()
+            } else if event.type == .keyUp || (event.type == .flagsChanged && !isModifierPressEvent(event)) {
+                handleHotkeyReleased()
+            }
+            return
+        }
+
+        guard terminalEnabled else { return }
+        guard matchesHotkey(
+            event,
+            keyCode: activeTerminalHotkeyKeyCode,
+            modifiers: activeTerminalHotkeyModifiers,
+            functionPressedForEvent: fnPressedForCurrentEvent
+        ) else { return }
+
+        if event.type == .keyDown || (event.type == .flagsChanged && isModifierPressEvent(event)) {
             VoiceTerminalService.shared.handleHotkeyPressed()
-        } else if event.type == .keyUp {
+        } else if event.type == .keyUp || (event.type == .flagsChanged && !isModifierPressEvent(event)) {
             VoiceTerminalService.shared.handleHotkeyReleased()
         }
     }
 
     private func shouldUseMonitorFallback(for event: NSEvent) -> Bool {
-        guard event.type == .keyDown || event.type == .keyUp else { return false }
+        guard event.type == .keyDown || event.type == .keyUp || event.type == .flagsChanged else { return false }
         if !keyTapAvailable { return true }
+        if !eventTapHandlesHotkeys { return true }
+        if HotkeyConfig.isModifierOnlyKeyCode(Int(activeHotkeyKeyCode)) || HotkeyConfig.isModifierOnlyKeyCode(Int(activeTerminalHotkeyKeyCode)) {
+            return true
+        }
         return activeHotkeyModifiers == 0 || activeTerminalHotkeyModifiers == 0
     }
 
-    private func matchesHotkey(_ event: NSEvent, keyCode: UInt32, modifiers: UInt32) -> Bool {
+    private func matchesHotkey(
+        _ event: NSEvent,
+        keyCode: UInt32,
+        modifiers: UInt32,
+        functionPressedForEvent: Bool?
+    ) -> Bool {
         let mask = UInt32(HotkeyConfig.modifierMask)
-        let currentModifiers = UInt32(
+        var currentModifiers = UInt32(
             HotkeyConfig.carbonFlags(
                 from: event.modifierFlags.intersection([.option, .command, .control, .shift, .function])
             )
         )
+        if functionPressedForEvent ?? isFunctionModifierPressed {
+            currentModifiers |= UInt32(HotkeyConfig.functionModifierFlag)
+        }
+        if (modifiers & UInt32(HotkeyConfig.functionModifierFlag)) == 0,
+           HotkeyConfig.isFunctionRowKeyCode(Int(keyCode)) {
+            currentModifiers &= ~UInt32(HotkeyConfig.functionModifierFlag)
+        }
         return UInt32(event.keyCode) == keyCode && (currentModifiers & mask) == (modifiers & mask)
+    }
+
+    private func handleModifierOnlyFlagsChanged(
+        _ event: NSEvent,
+        keyCode: UInt32,
+        modifiers: UInt32,
+        onPressed: () -> Void,
+        onReleased: () -> Void
+    ) -> Bool {
+        guard event.type == .flagsChanged else { return false }
+        guard HotkeyConfig.isModifierOnlyKeyCode(Int(keyCode)) else { return false }
+        guard UInt32(event.keyCode) == keyCode else { return false }
+
+        let expectedFlag = UInt32(HotkeyConfig.modifierFlag(for: Int(keyCode)) ?? 0)
+        guard expectedFlag != 0 else { return false }
+        guard (UInt32(modifiers) & expectedFlag) != 0 else { return false }
+
+        if isModifierKeyPressed(event) {
+            onPressed()
+        } else {
+            onReleased()
+        }
+        return true
+    }
+
+    private func isModifierKeyPressed(_ event: NSEvent) -> Bool {
+        let flags = event.modifierFlags
+        switch Int(event.keyCode) {
+        case 55, 54: return flags.contains(.command)
+        case 58, 61: return flags.contains(.option)
+        case 59, 62: return flags.contains(.control)
+        case 56, 60: return flags.contains(.shift)
+        case 63: return flags.contains(.function)
+        case 57: return flags.contains(.capsLock)
+        default: return false
+        }
     }
 
     private func handleKeyConsumeTap(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
@@ -414,7 +525,13 @@ final class AppHotkeyVoiceService: NSObject {
         let keyCode = UInt32(event.getIntegerValueField(.keyboardEventKeycode))
         let modifiers = HotkeyConfig.carbonFlags(from: NSEvent.ModifierFlags(rawValue: UInt(event.flags.rawValue)))
         let mask = UInt32(HotkeyConfig.modifierMask)
-        let current = UInt32(modifiers) & mask
+        if keyCode == 63 {
+            isFunctionModifierPressed = (type == .keyDown)
+        }
+        var current = UInt32(modifiers) & mask
+        if isFunctionModifierPressed {
+            current |= UInt32(HotkeyConfig.functionModifierFlag)
+        }
         let expectedVoice = activeHotkeyModifiers & mask
 
         if keyCode == activeHotkeyKeyCode && current == expectedVoice {
@@ -429,8 +546,9 @@ final class AppHotkeyVoiceService: NSObject {
                         self.handleHotkeyReleased()
                     }
                 }
+                return nil
             }
-            return nil
+            return Unmanaged.passUnretained(event)
         }
 
         let expectedTerminal = activeTerminalHotkeyModifiers & mask
@@ -444,16 +562,45 @@ final class AppHotkeyVoiceService: NSObject {
                         VoiceTerminalService.shared.handleHotkeyReleased()
                     }
                 }
+                return nil
             }
-            return nil
+            return Unmanaged.passUnretained(event)
         }
 
         return Unmanaged.passUnretained(event)
     }
 
+    private func refreshEventTapHandlingPolicy() {
+        let functionFlag = UInt32(HotkeyConfig.functionModifierFlag)
+        let terminalEnabled = SharedSettings.defaults.object(forKey: SharedSettings.Keys.terminalHotkeyEnabled) as? Bool ?? false
+        let voiceUsesFunction = (activeHotkeyModifiers & functionFlag) != 0
+        let terminalUsesFunction = terminalEnabled && (activeTerminalHotkeyModifiers & functionFlag) != 0
+        // Fn combinations are more reliable via NSEvent monitor fallback.
+        eventTapHandlesHotkeys = !(voiceUsesFunction || terminalUsesFunction)
+    }
+
+    private func isModifierPressEvent(_ event: NSEvent) -> Bool {
+        guard event.type == .flagsChanged else { return false }
+        let flags = event.modifierFlags
+        switch Int(event.keyCode) {
+        case 55, 54: return flags.contains(.command)
+        case 58, 61: return flags.contains(.option)
+        case 59, 62: return flags.contains(.control)
+        case 56, 60: return flags.contains(.shift)
+        case 63: return flags.contains(.function)
+        case 57: return flags.contains(.capsLock)
+        default: return false
+        }
+    }
+
     private func updateHotkeyRuntimeStatus(_ status: String) {
         let defaults = SharedSettings.defaults
         defaults.set(status, forKey: SharedSettings.Keys.hotkeyRuntimeStatus)
+    }
+
+    private func updateTerminalHotkeyRuntimeStatus(_ status: String) {
+        let defaults = SharedSettings.defaults
+        defaults.set(status, forKey: SharedSettings.Keys.terminalHotkeyRuntimeStatus)
     }
 
     private func formattedHotkey(modifiers: Int, keyCode: Int) -> String {

@@ -116,9 +116,11 @@ struct SettingsView: View {
     @State private var terminalHotkeyEnabled = true
     @State private var terminalHotkeyModifiers = HotkeyConfig.defaultTerminalModifiers
     @State private var terminalHotkeyKeyCode = HotkeyConfig.defaultTerminalKeyCode
+    @State private var terminalHotkeyRuntimeStatus = "等待注册"
     @State private var isCapturingTerminalHotkey = false
     @State private var terminalHotkeyCaptureHint = "点击快捷键框后直接按键盘录入"
     @State private var localTerminalKeyMonitor: Any?
+    @State private var pendingTerminalHotkeyCommit: DispatchWorkItem?
 
     @State private var launchAtLoginMessage = ""
     @State private var isCapturingHotkey = false
@@ -126,6 +128,7 @@ struct SettingsView: View {
     @State private var hotkeyRuntimeStatus = "等待注册"
     @State private var diagnostics = PermissionDiagnostics.snapshot()
     @State private var localKeyMonitor: Any?
+    @State private var pendingHotkeyCommit: DispatchWorkItem?
     @State private var stylePrompts: [String: String] = [:]
     @State private var editingStyleId: String = ""
     @State private var showStylePromptSheet = false
@@ -404,6 +407,14 @@ struct SettingsView: View {
             Text(terminalHotkeyCaptureHint)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+            HStack {
+                Text("运行状态:")
+                Spacer()
+                Text(terminalHotkeyRuntimeStatus)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
         }
 
         // 功能说明
@@ -475,8 +486,19 @@ struct SettingsView: View {
                 Text("API Base URL")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                TextField("https://oneapi.gemiaude.com/v1", text: $llmAPIBaseURL)
-                    .textFieldStyle(.roundedBorder)
+                HStack(spacing: 8) {
+                    TextField("https://oneapi.gemiaude.com/v1", text: $llmAPIBaseURL)
+                        .textFieldStyle(.roundedBorder)
+                        .textSelection(.enabled)
+                    Button("粘贴") {
+                        if let value = NSPasteboard.general.string(forType: .string)?
+                            .trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty {
+                            llmAPIBaseURL = value
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
                 Text("修改后会自动请求 /models 刷新模型列表。")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -502,6 +524,23 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.borderless)
+
+                    Button("粘贴") {
+                        if let value = NSPasteboard.general.string(forType: .string)?
+                            .trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty {
+                            llmAPIKey = value
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+
+                    Button("复制") {
+                        guard !llmAPIKey.isEmpty else { return }
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(llmAPIKey, forType: .string)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
                 }
             }
 
@@ -804,6 +843,7 @@ struct SettingsView: View {
         terminalHotkeyEnabled = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyEnabled) as? Bool ?? true
         terminalHotkeyModifiers = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyModifiers) as? Int ?? HotkeyConfig.defaultTerminalModifiers
         terminalHotkeyKeyCode = defaults.object(forKey: SharedSettings.Keys.terminalHotkeyKeyCode) as? Int ?? HotkeyConfig.defaultTerminalKeyCode
+        terminalHotkeyRuntimeStatus = defaults.string(forKey: SharedSettings.Keys.terminalHotkeyRuntimeStatus) ?? "等待注册"
         llmEnabled = defaults.object(forKey: SharedSettings.Keys.llmEnabled) as? Bool ?? false
         llmAPIBaseURL = defaults.string(forKey: SharedSettings.Keys.llmAPIBaseURL) ?? llmAPIBaseURL
         llmAPIKey = defaults.string(forKey: SharedSettings.Keys.llmAPIKey) ?? llmAPIKey
@@ -919,9 +959,13 @@ struct SettingsView: View {
     }
 
     private func refreshHotkeyRuntimeStatus() {
-        let status = SharedSettings.defaults.string(forKey: SharedSettings.Keys.hotkeyRuntimeStatus) ?? "等待注册"
-        if status != hotkeyRuntimeStatus {
-            hotkeyRuntimeStatus = status
+        let voiceStatus = SharedSettings.defaults.string(forKey: SharedSettings.Keys.hotkeyRuntimeStatus) ?? "等待注册"
+        if voiceStatus != hotkeyRuntimeStatus {
+            hotkeyRuntimeStatus = voiceStatus
+        }
+        let terminalStatus = SharedSettings.defaults.string(forKey: SharedSettings.Keys.terminalHotkeyRuntimeStatus) ?? "等待注册"
+        if terminalStatus != terminalHotkeyRuntimeStatus {
+            terminalHotkeyRuntimeStatus = terminalStatus
         }
     }
 
@@ -941,12 +985,20 @@ struct SettingsView: View {
             }
 
             if event.type == .flagsChanged {
-                guard HotkeyConfig.isModifierOnlyKeyCode(Int(event.keyCode)),
-                      isModifierKeyPressed(event) else {
+                guard HotkeyConfig.isModifierOnlyKeyCode(Int(event.keyCode)) else {
                     return event
                 }
+                if isModifierKeyPressed(event) {
+                    let modifierName = HotkeyConfig.keyTitle(for: Int(event.keyCode))
+                    hotkeyCaptureHint = "已检测 \(modifierName)，继续按主键可保存组合；停留 0.8 秒保存单键"
+                    schedulePendingHotkeyCommit(for: event)
+                } else {
+                    cancelPendingHotkeyCommit()
+                }
+                return nil
             }
 
+            cancelPendingHotkeyCommit()
             let modifiers = event.modifierFlags.intersection([.option, .command, .control, .shift, .function])
             let modifierFlags = HotkeyConfig.carbonFlags(from: modifiers)
             let keyCode = Int(event.keyCode)
@@ -966,6 +1018,7 @@ struct SettingsView: View {
 
     private func stopHotkeyCapture() {
         isCapturingHotkey = false
+        cancelPendingHotkeyCommit()
         if let monitor = localKeyMonitor {
             NSEvent.removeMonitor(monitor)
             localKeyMonitor = nil
@@ -990,12 +1043,20 @@ struct SettingsView: View {
             }
 
             if event.type == .flagsChanged {
-                guard HotkeyConfig.isModifierOnlyKeyCode(Int(event.keyCode)),
-                      isModifierKeyPressed(event) else {
+                guard HotkeyConfig.isModifierOnlyKeyCode(Int(event.keyCode)) else {
                     return event
                 }
+                if isModifierKeyPressed(event) {
+                    let modifierName = HotkeyConfig.keyTitle(for: Int(event.keyCode))
+                    terminalHotkeyCaptureHint = "已检测 \(modifierName)，继续按主键可保存组合；停留 0.8 秒保存单键"
+                    schedulePendingTerminalHotkeyCommit(for: event)
+                } else {
+                    cancelPendingTerminalHotkeyCommit()
+                }
+                return nil
             }
 
+            cancelPendingTerminalHotkeyCommit()
             let modifiers = event.modifierFlags.intersection([.option, .command, .control, .shift, .function])
             let modifierFlags = HotkeyConfig.carbonFlags(from: modifiers)
             let keyCode = Int(event.keyCode)
@@ -1015,10 +1076,53 @@ struct SettingsView: View {
 
     private func stopTerminalHotkeyCapture() {
         isCapturingTerminalHotkey = false
+        cancelPendingTerminalHotkeyCommit()
         if let monitor = localTerminalKeyMonitor {
             NSEvent.removeMonitor(monitor)
             localTerminalKeyMonitor = nil
         }
+    }
+
+    private func schedulePendingHotkeyCommit(for event: NSEvent) {
+        cancelPendingHotkeyCommit()
+        let modifiers = event.modifierFlags.intersection([.option, .command, .control, .shift, .function])
+        let modifierFlags = HotkeyConfig.carbonFlags(from: modifiers)
+        let keyCode = Int(event.keyCode)
+        let work = DispatchWorkItem {
+            guard isCapturingHotkey else { return }
+            hotkeyModifiers = modifierFlags
+            hotkeyKeyCode = keyCode
+            hotkeyCaptureHint = "已保存：\(hotkeyDescription)"
+            stopHotkeyCapture()
+        }
+        pendingHotkeyCommit = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: work)
+    }
+
+    private func cancelPendingHotkeyCommit() {
+        pendingHotkeyCommit?.cancel()
+        pendingHotkeyCommit = nil
+    }
+
+    private func schedulePendingTerminalHotkeyCommit(for event: NSEvent) {
+        cancelPendingTerminalHotkeyCommit()
+        let modifiers = event.modifierFlags.intersection([.option, .command, .control, .shift, .function])
+        let modifierFlags = HotkeyConfig.carbonFlags(from: modifiers)
+        let keyCode = Int(event.keyCode)
+        let work = DispatchWorkItem {
+            guard isCapturingTerminalHotkey else { return }
+            terminalHotkeyModifiers = modifierFlags
+            terminalHotkeyKeyCode = keyCode
+            terminalHotkeyCaptureHint = "已保存：\(terminalHotkeyDescription)"
+            stopTerminalHotkeyCapture()
+        }
+        pendingTerminalHotkeyCommit = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: work)
+    }
+
+    private func cancelPendingTerminalHotkeyCommit() {
+        pendingTerminalHotkeyCommit?.cancel()
+        pendingTerminalHotkeyCommit = nil
     }
 
     private func isModifierKeyPressed(_ event: NSEvent) -> Bool {

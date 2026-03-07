@@ -105,7 +105,7 @@ final class PolishClient {
                 .init(role: "system", content: systemPrompt(for: style)),
                 .init(role: "user", content: text)
             ],
-            temperature: 0.1,
+            temperature: 0.0,
             max_tokens: effectiveMaxTokens(for: text)
         )
 
@@ -150,6 +150,8 @@ final class PolishClient {
         不输出解释、标题、前后缀。
         禁止输出：改写后、优化后、根据你的、作为、我将、下面是。
         禁止输出符号：* # ` [ ]。
+        输出长度原则上不超过原文的 1.25 倍；短句仅做必要纠错。
+        若无法确定是否需要改动，优先保留原句。
         仅输出最终改写文本。
         """
 
@@ -159,12 +161,21 @@ final class PolishClient {
             \(baseRules)
             Vibe Coding 术语规范：
             你面向的是开发者对 AI 编程助手发出的指令场景。
+            目标是把口语输入整理为可执行的开发指令，不新增需求。
+            输出结构要求（强调层次与可执行性）：
+            当原文信息较复杂（包含多个动作、约束、上下文）时，按“需求目标 / 现状与上下文 / 具体修改 / 约束与边界”分段表达。
+            每段使用简短标题行（如“需求目标：”），并换行给出内容；无对应信息则省略该段，不得脑补。
+            若原文本身是分点，保持 1. 2. 3. 编号并优化语序；若原文是自然段，改为清晰短段落。
+            句式尽量短，避免长句堆叠，确保一眼可执行。
             保留代码相关术语原样（函数名、变量名、文件名、CLI 命令）。
             中文口语技术词修正：
               接口→API，前端→frontend，后端→backend，数据库→database，部署→deploy，
               提示词→prompt，引导流程→onboarding，组件→component，钩子→hook，
               容器→container，镜像→image，流水线→pipeline，分支→branch，
               合并→merge，回滚→rollback，缓存→cache，路由→router。
+            Vibe Coding 高频术语优先：
+              页面→page，样式→CSS，状态管理→state management，接口联调→API integration，
+              构建→build，发布→release，测试用例→test case，回归测试→regression test。
             保留数字、路径、版本号、包名不做修改。
             如果原文是给 AI 的指令（如"帮我写一个..."），保持指令语气，不要改为陈述句。
             如果原文包含代码片段或命令，原样保留不动。
@@ -260,9 +271,12 @@ final class PolishClient {
         guard !original.isEmpty else { return false }
         let ratio = Double(output.count) / Double(original.count)
         if original.count <= 12 {
-            return ratio > 1.8
+            return ratio > 1.6
         }
-        return ratio > 1.35
+        if original.count <= 24 {
+            return ratio > 1.4
+        }
+        return ratio > 1.25
     }
 
     private func isSemanticDrift(original: String, output: String) -> Bool {

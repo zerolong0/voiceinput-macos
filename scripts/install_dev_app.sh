@@ -24,6 +24,19 @@ reset_onboarding_state() {
   defaults delete NSGlobalDomain hasCompletedOnboarding 2>/dev/null || true
 }
 
+reset_all_local_state() {
+  echo "Resetting all local app state (onboarding + shared settings + history)..."
+  defaults delete com.voiceinput.macos 2>/dev/null || true
+  defaults delete com.voiceinput.shared 2>/dev/null || true
+  # Backward compatibility: remove any prefixed plist variants if they exist.
+  defaults delete com.voiceinput.macos.debug 2>/dev/null || true
+  defaults delete com.voiceinput.shared.debug 2>/dev/null || true
+  rm -rf "$HOME/Library/Saved Application State/com.voiceinput.macos.savedState" 2>/dev/null || true
+  rm -rf "$HOME/Library/Preferences/com.voiceinput.macos.plist" 2>/dev/null || true
+  rm -rf "$HOME/Library/Preferences/com.voiceinput.shared.plist" 2>/dev/null || true
+  reset_onboarding_state
+}
+
 cleanup_running_voiceinput_instances() {
   osascript -e 'tell application "VoiceInput" to quit' 2>/dev/null || true
   killall VoiceInput 2>/dev/null || true
@@ -69,9 +82,10 @@ if [[ "${RESET_TCC:-0}" == "1" ]]; then
   killall tccd 2>/dev/null || true
 fi
 
-if [[ "${RESET_ONBOARDING:-0}" == "1" ]]; then
-  echo "Resetting onboarding state..."
-  reset_onboarding_state
+if [[ "${PRESERVE_CONFIG:-0}" != "1" ]]; then
+  reset_all_local_state
+else
+  echo "PRESERVE_CONFIG=1 detected, skipping local state reset."
 fi
 
 cleanup_running_voiceinput_instances

@@ -28,6 +28,7 @@ enum SharedSettings {
         static let terminalHotkeyEnabled = "terminalHotkeyEnabled"
         static let terminalHotkeyModifiers = "terminalHotkeyModifiers"
         static let terminalHotkeyKeyCode = "terminalHotkeyKeyCode"
+        static let terminalHotkeyRuntimeStatus = "terminalHotkeyRuntimeStatus"
         static let customRewritePrompt = "customRewritePrompt"
         static let customIntentPrompt = "customIntentPrompt"
         static let agentModel = "agentModel"
@@ -115,6 +116,9 @@ enum SharedSettings {
         if defaults.object(forKey: Keys.terminalHotkeyKeyCode) == nil {
             defaults.set(HotkeyConfig.defaultTerminalKeyCode, forKey: Keys.terminalHotkeyKeyCode)
         }
+        if defaults.string(forKey: Keys.terminalHotkeyRuntimeStatus) == nil {
+            defaults.set("等待注册", forKey: Keys.terminalHotkeyRuntimeStatus)
+        }
         if defaults.string(forKey: Keys.customRewritePrompt) == nil {
             defaults.set("", forKey: Keys.customRewritePrompt)
         }
@@ -123,7 +127,7 @@ enum SharedSettings {
         }
         if defaults.string(forKey: Keys.agentModel)?.isEmpty ?? true {
             // Migrate from llmModel if present, otherwise use default
-            let migrated = defaults.string(forKey: Keys.llmModel) ?? "gemini-2.5-flash"
+            let migrated = defaults.string(forKey: Keys.llmModel) ?? "gemini-2.5-flash-lite"
             defaults.set(migrated, forKey: Keys.agentModel)
         }
         if defaults.string(forKey: Keys.voiceInputModel)?.isEmpty ?? true {

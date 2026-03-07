@@ -208,6 +208,10 @@ struct RealtimePanelView: View {
 
 struct VoiceAgentPanelView: View {
     @ObservedObject private var session = VoiceAgentSessionStore.shared
+    @State private var isCapturingTerminalHotkey = false
+    @State private var terminalHotkeyCaptureHint = "点击后直接按键盘录入"
+    @State private var localTerminalKeyMonitor: Any?
+    @State private var pendingTerminalHotkeyCommit: DispatchWorkItem?
 
     private var currentHotkeyText: String {
         let modifiers = SharedSettings.defaults.object(forKey: SharedSettings.Keys.terminalHotkeyModifiers) as? Int ?? HotkeyConfig.defaultTerminalModifiers
@@ -234,6 +238,46 @@ struct VoiceAgentPanelView: View {
                 HomeStatCard(title: "当前状态", value: session.stageText)
                 HomeStatCard(title: "Agent 热键", value: currentHotkeyText)
                 HomeStatCard(title: "结果状态", value: session.stage.rawValue)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Agent 按键设置")
+                    .font(.headline)
+                Button {
+                    if isCapturingTerminalHotkey {
+                        stopTerminalHotkeyCapture()
+                    } else {
+                        startTerminalHotkeyCapture()
+                    }
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("终端激活按键")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text(isCapturingTerminalHotkey ? "请直接按下快捷键..." : currentHotkeyText)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.primary)
+                        }
+                        Spacer()
+                        Image(systemName: isCapturingTerminalHotkey ? "keyboard.badge.ellipsis" : "keyboard")
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.secondary.opacity(0.12))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(isCapturingTerminalHotkey ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                    )
+                }
+                .buttonStyle(.plain)
+                Text(terminalHotkeyCaptureHint)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             TranscriptStreamBox(
@@ -269,6 +313,109 @@ struct VoiceAgentPanelView: View {
             Spacer()
         }
         .padding(24)
+        .onDisappear {
+            stopTerminalHotkeyCapture()
+        }
+    }
+
+    private func startTerminalHotkeyCapture() {
+        stopTerminalHotkeyCapture()
+        isCapturingTerminalHotkey = true
+        terminalHotkeyCaptureHint = "正在录入，按下任意键完成（Esc 取消）"
+
+        localTerminalKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
+            guard isCapturingTerminalHotkey else { return event }
+            if event.type == .keyDown && event.keyCode == 53 {
+                terminalHotkeyCaptureHint = "已取消录入"
+                stopTerminalHotkeyCapture()
+                return nil
+            }
+
+            if event.type == .flagsChanged {
+                guard HotkeyConfig.isModifierOnlyKeyCode(Int(event.keyCode)) else {
+                    return event
+                }
+                if isModifierKeyPressed(event) {
+                    let modifierName = HotkeyConfig.keyTitle(for: Int(event.keyCode))
+                    terminalHotkeyCaptureHint = "已检测 \(modifierName)，继续按主键可保存组合；停留 0.8 秒保存单键"
+                    schedulePendingTerminalHotkeyCommit(for: event)
+                } else {
+                    cancelPendingTerminalHotkeyCommit()
+                }
+                return nil
+            }
+
+            cancelPendingTerminalHotkeyCommit()
+            let modifiers = event.modifierFlags.intersection([.option, .command, .control, .shift, .function])
+            let modifierFlags = HotkeyConfig.carbonFlags(from: modifiers)
+            let keyCode = Int(event.keyCode)
+            let validation = HotkeyConfig.validate(modifiers: modifierFlags, keyCode: keyCode)
+            guard validation.isValid else {
+                terminalHotkeyCaptureHint = validation.message ?? "快捷键无效"
+                return nil
+            }
+
+            SharedSettings.defaults.set(modifierFlags, forKey: SharedSettings.Keys.terminalHotkeyModifiers)
+            SharedSettings.defaults.set(keyCode, forKey: SharedSettings.Keys.terminalHotkeyKeyCode)
+            terminalHotkeyCaptureHint = "已保存：\(HotkeyConfig.displayString(modifiers: modifierFlags, keyCode: keyCode))"
+            DistributedNotificationCenter.default().postNotificationName(
+                Notification.Name(SharedNotifications.hotkeyChanged),
+                object: nil,
+                userInfo: nil,
+                deliverImmediately: true
+            )
+            stopTerminalHotkeyCapture()
+            return nil
+        }
+    }
+
+    private func stopTerminalHotkeyCapture() {
+        isCapturingTerminalHotkey = false
+        cancelPendingTerminalHotkeyCommit()
+        if let monitor = localTerminalKeyMonitor {
+            NSEvent.removeMonitor(monitor)
+            localTerminalKeyMonitor = nil
+        }
+    }
+
+    private func schedulePendingTerminalHotkeyCommit(for event: NSEvent) {
+        cancelPendingTerminalHotkeyCommit()
+        let modifiers = event.modifierFlags.intersection([.option, .command, .control, .shift, .function])
+        let modifierFlags = HotkeyConfig.carbonFlags(from: modifiers)
+        let keyCode = Int(event.keyCode)
+        let work = DispatchWorkItem {
+            guard isCapturingTerminalHotkey else { return }
+            SharedSettings.defaults.set(modifierFlags, forKey: SharedSettings.Keys.terminalHotkeyModifiers)
+            SharedSettings.defaults.set(keyCode, forKey: SharedSettings.Keys.terminalHotkeyKeyCode)
+            terminalHotkeyCaptureHint = "已保存：\(HotkeyConfig.displayString(modifiers: modifierFlags, keyCode: keyCode))"
+            DistributedNotificationCenter.default().postNotificationName(
+                Notification.Name(SharedNotifications.hotkeyChanged),
+                object: nil,
+                userInfo: nil,
+                deliverImmediately: true
+            )
+            stopTerminalHotkeyCapture()
+        }
+        pendingTerminalHotkeyCommit = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: work)
+    }
+
+    private func cancelPendingTerminalHotkeyCommit() {
+        pendingTerminalHotkeyCommit?.cancel()
+        pendingTerminalHotkeyCommit = nil
+    }
+
+    private func isModifierKeyPressed(_ event: NSEvent) -> Bool {
+        let flags = event.modifierFlags
+        switch Int(event.keyCode) {
+        case 55, 54: return flags.contains(.command)
+        case 58, 61: return flags.contains(.option)
+        case 59, 62: return flags.contains(.control)
+        case 56, 60: return flags.contains(.shift)
+        case 63: return flags.contains(.function)
+        case 57: return flags.contains(.capsLock)
+        default: return false
+        }
     }
 }
 
