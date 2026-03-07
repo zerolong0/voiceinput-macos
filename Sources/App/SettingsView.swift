@@ -107,6 +107,9 @@ struct SettingsView: View {
     @State private var modelCatalogMessage = ""
     @State private var saveHistoryEnabled = true
     @State private var muteExternalAudioDuringInput = true
+    @State private var preferredInputDeviceUID = ""
+    @State private var inputDevices: [MicrophoneDeviceInfo] = []
+    @State private var inputDeviceMessage = ""
     @State private var interactionSoundEnabled = true
     @State private var launchAtLoginEnabled = false
     @State private var showInDockEnabled = true
@@ -229,6 +232,7 @@ struct SettingsView: View {
         .onAppear {
             SharedSettings.bootstrapDefaults()
             syncFromSharedDefaults()
+            refreshInputDevices()
             diagnostics = PermissionDiagnostics.snapshot()
             refreshPermissions()
             scheduleModelRefresh(immediate: true)
@@ -260,6 +264,10 @@ struct SettingsView: View {
         .onChange(of: voiceInputModel) { _ in syncToSharedDefaults() }
         .onChange(of: saveHistoryEnabled) { _ in syncToSharedDefaults() }
         .onChange(of: muteExternalAudioDuringInput) { _ in syncToSharedDefaults() }
+        .onChange(of: preferredInputDeviceUID) { _ in
+            applyPreferredInputSelection()
+            syncToSharedDefaults()
+        }
         .onChange(of: interactionSoundEnabled) { _ in syncToSharedDefaults() }
         .onChange(of: launchAtLoginEnabled) { enabled in
             syncToSharedDefaults()
@@ -306,7 +314,7 @@ struct SettingsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text("默认热键：Option + 1 用于语音输入，Option + 2 用于 Voice Agent。仍然支持单键热键，用户可自行修改。按住说话松开结束；双击快捷键进入连续模式，再按一次结束。")
+            Text("默认热键：Option + 1 用于语音输入，Option + 2 用于 Voice Agent。仍然支持单键热键，用户可自行修改。按住说话，松开结束。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -523,11 +531,35 @@ struct SettingsView: View {
 
         // 音频
         SettingsSection(title: "音频", icon: "speaker.wave.2") {
+            Picker("输入设备", selection: $preferredInputDeviceUID) {
+                Text("跟随系统（当前：\(MicrophoneDeviceManager.defaultInputDeviceName())）").tag("")
+                ForEach(inputDevices) { device in
+                    let suffix = device.isDefault ? "（系统默认）" : ""
+                    Text("\(device.name)\(suffix)").tag(device.uid)
+                }
+            }
+            .pickerStyle(.menu)
+
+            HStack(spacing: 8) {
+                Button("刷新麦克风列表") {
+                    refreshInputDevices()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                if !inputDeviceMessage.isEmpty {
+                    Text(inputDeviceMessage)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            }
+
             Toggle("语音输入时静音其他音频", isOn: $muteExternalAudioDuringInput)
                 .toggleStyle(.switch)
             Toggle("交互提示音", isOn: $interactionSoundEnabled)
                 .toggleStyle(.switch)
-            Text("语音终端各阶段播放系统提示音 (聆听/确认/成功/失败)。")
+            Text("默认跟随系统麦克风；也可指定固定麦克风。语音终端各阶段播放系统提示音 (聆听/确认/成功/失败)。")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -722,6 +754,35 @@ struct SettingsView: View {
         accessibilityGranted = AXIsProcessTrusted()
     }
 
+    private func refreshInputDevices() {
+        inputDevices = MicrophoneDeviceManager.listInputDevices()
+        if !preferredInputDeviceUID.isEmpty,
+           !inputDevices.contains(where: { $0.uid == preferredInputDeviceUID }) {
+            inputDeviceMessage = "指定麦克风当前不可用，已回退为跟随系统。"
+            preferredInputDeviceUID = ""
+        } else if inputDevices.isEmpty {
+            inputDeviceMessage = "未检测到可用麦克风设备。"
+        } else {
+            inputDeviceMessage = ""
+        }
+    }
+
+    private func applyPreferredInputSelection() {
+        let selected = preferredInputDeviceUID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !selected.isEmpty else {
+            inputDeviceMessage = "已设置为跟随系统默认麦克风。"
+            return
+        }
+
+        if MicrophoneDeviceManager.setDefaultInputDevice(uid: selected) {
+            let name = inputDevices.first(where: { $0.uid == selected })?.name ?? "指定麦克风"
+            inputDeviceMessage = "已切换到：\(name)"
+            refreshInputDevices()
+        } else {
+            inputDeviceMessage = "切换麦克风失败，请检查设备状态。"
+        }
+    }
+
     // MARK: - Settings Sync
 
     private func openSystemPreferences() {
@@ -730,10 +791,7 @@ struct SettingsView: View {
     }
 
     private var hotkeyDescription: String {
-        if hotkeyModifiers == 0 {
-            return HotkeyConfig.keyTitle(for: hotkeyKeyCode)
-        }
-        return "\(HotkeyConfig.modifierTitle(for: hotkeyModifiers)) + \(HotkeyConfig.keyTitle(for: hotkeyKeyCode))"
+        HotkeyConfig.displayString(modifiers: hotkeyModifiers, keyCode: hotkeyKeyCode)
     }
 
     private func syncFromSharedDefaults() {
@@ -754,6 +812,7 @@ struct SettingsView: View {
         voiceInputModel = defaults.string(forKey: SharedSettings.Keys.voiceInputModel) ?? voiceInputModel
         saveHistoryEnabled = defaults.object(forKey: SharedSettings.Keys.saveHistoryEnabled) as? Bool ?? true
         muteExternalAudioDuringInput = defaults.object(forKey: SharedSettings.Keys.muteExternalAudioDuringInput) as? Bool ?? true
+        preferredInputDeviceUID = defaults.string(forKey: SharedSettings.Keys.preferredInputDeviceUID) ?? ""
         interactionSoundEnabled = defaults.object(forKey: SharedSettings.Keys.interactionSoundEnabled) as? Bool ?? false
         launchAtLoginEnabled = defaults.object(forKey: SharedSettings.Keys.launchAtLoginEnabled) as? Bool ?? false
         showInDockEnabled = defaults.object(forKey: SharedSettings.Keys.showInDockEnabled) as? Bool ?? true
@@ -787,6 +846,7 @@ struct SettingsView: View {
         defaults.set(voiceInputModel, forKey: SharedSettings.Keys.voiceInputModel)
         defaults.set(saveHistoryEnabled, forKey: SharedSettings.Keys.saveHistoryEnabled)
         defaults.set(muteExternalAudioDuringInput, forKey: SharedSettings.Keys.muteExternalAudioDuringInput)
+        defaults.set(preferredInputDeviceUID, forKey: SharedSettings.Keys.preferredInputDeviceUID)
         defaults.set(interactionSoundEnabled, forKey: SharedSettings.Keys.interactionSoundEnabled)
         defaults.set(launchAtLoginEnabled, forKey: SharedSettings.Keys.launchAtLoginEnabled)
         defaults.set(showInDockEnabled, forKey: SharedSettings.Keys.showInDockEnabled)
@@ -872,14 +932,22 @@ struct SettingsView: View {
         isCapturingHotkey = true
         hotkeyCaptureHint = "正在录入，按下任意键完成（Esc 取消）"
 
-        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
+        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
             guard isCapturingHotkey else { return event }
-            if event.keyCode == 53 {
+            if event.type == .keyDown && event.keyCode == 53 {
                 hotkeyCaptureHint = "已取消录入"
                 stopHotkeyCapture()
                 return nil
             }
-            let modifiers = event.modifierFlags.intersection([.option, .command, .control, .shift])
+
+            if event.type == .flagsChanged {
+                guard HotkeyConfig.isModifierOnlyKeyCode(Int(event.keyCode)),
+                      isModifierKeyPressed(event) else {
+                    return event
+                }
+            }
+
+            let modifiers = event.modifierFlags.intersection([.option, .command, .control, .shift, .function])
             let modifierFlags = HotkeyConfig.carbonFlags(from: modifiers)
             let keyCode = Int(event.keyCode)
             let validation = HotkeyConfig.validate(modifiers: modifierFlags, keyCode: keyCode)
@@ -905,10 +973,7 @@ struct SettingsView: View {
     }
 
     private var terminalHotkeyDescription: String {
-        if terminalHotkeyModifiers == 0 {
-            return HotkeyConfig.keyTitle(for: terminalHotkeyKeyCode)
-        }
-        return "\(HotkeyConfig.modifierTitle(for: terminalHotkeyModifiers)) + \(HotkeyConfig.keyTitle(for: terminalHotkeyKeyCode))"
+        HotkeyConfig.displayString(modifiers: terminalHotkeyModifiers, keyCode: terminalHotkeyKeyCode)
     }
 
     private func startTerminalHotkeyCapture() {
@@ -916,14 +981,22 @@ struct SettingsView: View {
         isCapturingTerminalHotkey = true
         terminalHotkeyCaptureHint = "正在录入，按下任意键完成（Esc 取消）"
 
-        localTerminalKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { event in
+        localTerminalKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
             guard isCapturingTerminalHotkey else { return event }
-            if event.keyCode == 53 {
+            if event.type == .keyDown && event.keyCode == 53 {
                 terminalHotkeyCaptureHint = "已取消录入"
                 stopTerminalHotkeyCapture()
                 return nil
             }
-            let modifiers = event.modifierFlags.intersection([.option, .command, .control, .shift])
+
+            if event.type == .flagsChanged {
+                guard HotkeyConfig.isModifierOnlyKeyCode(Int(event.keyCode)),
+                      isModifierKeyPressed(event) else {
+                    return event
+                }
+            }
+
+            let modifiers = event.modifierFlags.intersection([.option, .command, .control, .shift, .function])
             let modifierFlags = HotkeyConfig.carbonFlags(from: modifiers)
             let keyCode = Int(event.keyCode)
             let validation = HotkeyConfig.validate(modifiers: modifierFlags, keyCode: keyCode)
@@ -945,6 +1018,26 @@ struct SettingsView: View {
         if let monitor = localTerminalKeyMonitor {
             NSEvent.removeMonitor(monitor)
             localTerminalKeyMonitor = nil
+        }
+    }
+
+    private func isModifierKeyPressed(_ event: NSEvent) -> Bool {
+        let flags = event.modifierFlags
+        switch Int(event.keyCode) {
+        case 55, 54:
+            return flags.contains(.command)
+        case 58, 61:
+            return flags.contains(.option)
+        case 59, 62:
+            return flags.contains(.control)
+        case 56, 60:
+            return flags.contains(.shift)
+        case 63:
+            return flags.contains(.function)
+        case 57:
+            return flags.contains(.capsLock)
+        default:
+            return false
         }
     }
 }

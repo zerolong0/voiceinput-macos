@@ -99,8 +99,6 @@ public final class AudioBufferManager {
         defer { lock.unlock() }
 
         guard !buffers.isEmpty else { return nil }
-        guard let firstBuffer = buffers.first else { return nil }
-
         let totalFrameCount = buffers.reduce(0) { $0 + $1.frameLength }
 
         guard let outputBuffer = AVAudioPCMBuffer(
@@ -180,7 +178,7 @@ public final class AudioBufferManager {
         outputBuffer.frameLength = targetFrames
 
         if let outputData = outputBuffer.floatChannelData?[0] {
-            outputData.assign(from: allData, count: Int(targetFrames))
+            outputData.update(from: allData, count: Int(targetFrames))
         }
 
         return outputBuffer

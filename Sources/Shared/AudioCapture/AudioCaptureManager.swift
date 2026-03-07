@@ -242,7 +242,7 @@ public final class AudioCaptureManager: NSObject {
         // Process with VAD
         if let floatData = convertedBuffer.floatChannelData?[0] {
             let frameCount = Int(convertedBuffer.frameLength)
-            vadDetector.processAudioData(floatData, frameCount: frameCount)
+            _ = vadDetector.processAudioData(floatData, frameCount: frameCount)
         }
 
         // Notify delegate

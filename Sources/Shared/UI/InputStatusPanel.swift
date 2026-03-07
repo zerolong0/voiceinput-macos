@@ -58,6 +58,14 @@ final class InputStatusPanel {
     var onCopyRequested: (() -> Void)?
     var onPrimaryRequested: (() -> Void)?
 
+    private func onMain(_ block: @escaping () -> Void) {
+        if Thread.isMainThread {
+            block()
+        } else {
+            DispatchQueue.main.async(execute: block)
+        }
+    }
+
     init() {
         panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 360, height: 44),
@@ -234,6 +242,10 @@ final class InputStatusPanel {
     }
 
     func render(_ model: InputOverlayModel) {
+        guard Thread.isMainThread else {
+            onMain { [weak self] in self?.render(model) }
+            return
+        }
         autoHideTimer?.invalidate()
         autoHideTimer = nil
         currentStage = model.stage
@@ -279,11 +291,19 @@ final class InputStatusPanel {
     }
 
     func show(status: String, text: String, showCopy: Bool) {
+        guard Thread.isMainThread else {
+            onMain { [weak self] in self?.show(status: status, text: text, showCopy: showCopy) }
+            return
+        }
         let stage: InputOverlayModel.Stage = showCopy ? .copyFallback : .idle
         render(.init(stage: stage, statusText: status, displayText: text, showsCopy: showCopy, showsClose: false, a11yLabel: status))
     }
 
     func update(status: String, text: String, showCopy: Bool) {
+        guard Thread.isMainThread else {
+            onMain { [weak self] in self?.update(status: status, text: text, showCopy: showCopy) }
+            return
+        }
         let stage: InputOverlayModel.Stage = showCopy ? .copyFallback : currentStage
         render(.init(stage: stage, statusText: status, displayText: text, showsCopy: showCopy, showsClose: false, a11yLabel: status))
     }
@@ -301,6 +321,10 @@ final class InputStatusPanel {
     }
 
     func showCopyFallback(finalText: String) {
+        guard Thread.isMainThread else {
+            onMain { [weak self] in self?.showCopyFallback(finalText: finalText) }
+            return
+        }
         autoHideTimer?.invalidate()
         autoHideTimer = nil
         currentStage = .copyFallback
@@ -366,6 +390,10 @@ final class InputStatusPanel {
     }
 
     func hide() {
+        guard Thread.isMainThread else {
+            onMain { [weak self] in self?.hide() }
+            return
+        }
         autoHideTimer?.invalidate()
         autoHideTimer = nil
         spinner.stopAnimation(nil)
@@ -719,8 +747,11 @@ final class InputStatusPanel {
     }
 
     private func updateRewritingOverlayWidth() {
-        let width = max(0, card.bounds.width * rewritingOverlayProgress)
+        // Avoid forcing synchronous layout during AppKit layout pass.
+        // Calling layoutSubtreeIfNeeded() here can recurse with animation/layout cycles.
+        let baseWidth = max(card.bounds.width, panel.frame.width)
+        let width = max(0, baseWidth * rewritingOverlayProgress)
         rewritingOverlayWidthConstraint?.constant = width
-        card.layoutSubtreeIfNeeded()
+        card.needsLayout = true
     }
 }

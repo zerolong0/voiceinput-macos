@@ -144,9 +144,10 @@ final class VoiceTerminalService: NSObject {
         currentText = ""
 
         guard !capturedText.isEmpty else {
-            terminalPanel.hide()
             isActive = false
-            VoiceAgentSessionStore.shared.reset()
+            terminalPanel.setState(.error("未捕捉到麦克风输入，请检查麦克风权限、输入设备和环境噪声后重试。"))
+            VoiceAgentSessionStore.shared.setStage(.error, text: "未捕捉到麦克风输入")
+            RuntimeDiagnosticsStore.record("voice-agent", "No microphone input captured, aborting")
             return
         }
 

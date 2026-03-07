@@ -8,6 +8,187 @@
 import Foundation
 import AVFoundation
 import Speech
+import CoreAudio
+
+enum PreferredInputApplyResult {
+    case followSystem
+    case applied
+    case missingSelectedDevice
+    case setFailed(OSStatus)
+}
+
+struct MicrophoneDeviceInfo: Identifiable, Hashable {
+    let id: AudioDeviceID
+    let uid: String
+    let name: String
+    let isDefault: Bool
+}
+
+enum MicrophoneDeviceManager {
+    static func defaultInputDeviceName() -> String {
+        let id = defaultInputDeviceID()
+        return deviceName(deviceID: id) ?? "系统默认"
+    }
+
+    static func listInputDevices() -> [MicrophoneDeviceInfo] {
+        let defaultID = defaultInputDeviceID()
+        return allAudioDeviceIDs().compactMap { id in
+            guard hasInputChannels(deviceID: id) else { return nil }
+            guard let uid = deviceUID(deviceID: id) else { return nil }
+            let name = deviceName(deviceID: id) ?? "未知麦克风"
+            return MicrophoneDeviceInfo(id: id, uid: uid, name: name, isDefault: id == defaultID)
+        }
+        .sorted { lhs, rhs in
+            if lhs.isDefault != rhs.isDefault { return lhs.isDefault }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
+    }
+
+    static func setDefaultInputDevice(uid: String) -> Bool {
+        guard let device = deviceID(forUID: uid) else { return false }
+        var mutableDevice = device
+        let size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let status = AudioObjectSetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            0,
+            nil,
+            size,
+            &mutableDevice
+        )
+        return status == noErr
+    }
+
+    static func applyPreferredInputFromSettings() -> PreferredInputApplyResult {
+        let preferredUID = SharedSettings.defaults.string(forKey: SharedSettings.Keys.preferredInputDeviceUID) ?? ""
+        let trimmed = preferredUID.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return .followSystem }
+
+        guard let targetID = deviceID(forUID: trimmed) else {
+            return .missingSelectedDevice
+        }
+        if defaultInputDeviceID() == targetID {
+            return .applied
+        }
+
+        var mutableDevice = targetID
+        let size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let status = AudioObjectSetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            0,
+            nil,
+            size,
+            &mutableDevice
+        )
+        return status == noErr ? .applied : .setFailed(status)
+    }
+
+    private static func defaultInputDeviceID() -> AudioDeviceID {
+        var deviceID = AudioDeviceID(0)
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let status = AudioObjectGetPropertyData(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            0,
+            nil,
+            &size,
+            &deviceID
+        )
+        return status == noErr ? deviceID : AudioDeviceID(0)
+    }
+
+    private static func allAudioDeviceIDs() -> [AudioDeviceID] {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDevices,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var size: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size) == noErr else {
+            return []
+        }
+        let count = Int(size) / MemoryLayout<AudioDeviceID>.size
+        var devices = Array(repeating: AudioDeviceID(0), count: count)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &devices) == noErr else {
+            return []
+        }
+        return devices
+    }
+
+    private static func hasInputChannels(deviceID: AudioDeviceID) -> Bool {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyStreamConfiguration,
+            mScope: kAudioDevicePropertyScopeInput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var size: UInt32 = 0
+        guard AudioObjectGetPropertyDataSize(deviceID, &address, 0, nil, &size) == noErr else {
+            return false
+        }
+
+        let bufferListPtr = UnsafeMutableRawPointer.allocate(byteCount: Int(size), alignment: MemoryLayout<AudioBufferList>.alignment)
+        defer { bufferListPtr.deallocate() }
+        guard AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, bufferListPtr) == noErr else {
+            return false
+        }
+
+        let bufferList = bufferListPtr.bindMemory(to: AudioBufferList.self, capacity: 1)
+        let buffers = UnsafeMutableAudioBufferListPointer(bufferList)
+        return buffers.reduce(0) { $0 + Int($1.mNumberChannels) } > 0
+    }
+
+    private static func deviceUID(deviceID: AudioDeviceID) -> String? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyDeviceUID,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+        var uidRef: Unmanaged<CFString>?
+        guard AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &uidRef) == noErr else {
+            return nil
+        }
+        let value = uidRef?.takeUnretainedValue() as String? ?? ""
+        return value.isEmpty ? nil : value
+    }
+
+    private static func deviceName(deviceID: AudioDeviceID) -> String? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioObjectPropertyName,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var size = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
+        var nameRef: Unmanaged<CFString>?
+        guard AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &nameRef) == noErr else {
+            return nil
+        }
+        let value = nameRef?.takeUnretainedValue() as String? ?? ""
+        return value.isEmpty ? nil : value
+    }
+
+    private static func deviceID(forUID uid: String) -> AudioDeviceID? {
+        allAudioDeviceIDs().first(where: { id in
+            hasInputChannels(deviceID: id) && deviceUID(deviceID: id) == uid
+        })
+    }
+}
 
 // MARK: - Whisper Engine Errors
 
@@ -208,6 +389,17 @@ public final class WhisperEngine: NSObject {
         // Cancel any existing task
         stop()
 
+        switch MicrophoneDeviceManager.applyPreferredInputFromSettings() {
+        case .followSystem:
+            break
+        case .applied:
+            break
+        case .missingSelectedDevice:
+            throw WhisperError.transcriptionFailed("指定麦克风不可用，请在设置中改为跟随系统或重新选择设备")
+        case .setFailed(let status):
+            throw WhisperError.transcriptionFailed("切换指定麦克风失败（\(status)），请改为跟随系统重试")
+        }
+
         // Note: macOS doesn't require AVAudioSession configuration like iOS
 
         // Create recognition request
@@ -219,10 +411,17 @@ public final class WhisperEngine: NSObject {
         recognitionRequest.shouldReportPartialResults = true
         recognitionRequest.requiresOnDeviceRecognition = false
 
-        // Configure audio input
+        // Configure audio input (prefer input format; fallback to output format)
         let inputNode = audioEngine.inputNode
-        let recordingFormat = inputNode.outputFormat(forBus: 0)
+        var recordingFormat = inputNode.inputFormat(forBus: 0)
+        if recordingFormat.sampleRate <= 0 || recordingFormat.channelCount <= 0 {
+            recordingFormat = inputNode.outputFormat(forBus: 0)
+        }
+        guard recordingFormat.sampleRate > 0, recordingFormat.channelCount > 0 else {
+            throw WhisperError.transcriptionFailed("无法获取可用的输入音频格式，请检查麦克风设备")
+        }
 
+        inputNode.removeTap(onBus: 0)
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { [weak self] buffer, _ in
             self?.recognitionRequest?.append(buffer)
         }
@@ -254,7 +453,12 @@ public final class WhisperEngine: NSObject {
 
         // Start audio engine
         audioEngine.prepare()
-        try audioEngine.start()
+        do {
+            try audioEngine.start()
+        } catch {
+            inputNode.removeTap(onBus: 0)
+            throw WhisperError.transcriptionFailed("音频引擎启动失败：\(error.localizedDescription)")
+        }
 
         isRunning = true
         delegate?.whisperEngineDidStart(self)

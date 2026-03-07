@@ -202,7 +202,7 @@ struct OnboardingView: View {
 
     private var hotkeyPage: some View {
         OnboardingCard {
-            Text("默认热键是 Option + 1，用于语音输入。Voice Agent 默认使用 Option + 2。快捷键仍支持单键和双键组合，用户后续可以自行修改。双击快捷键可进入连续模式，再按一次结束。")
+            Text("默认热键是 Option + 1，用于语音输入。Voice Agent 默认使用 Option + 2。快捷键仍支持单键和双键组合，用户后续可以自行修改。按住说话，松开结束。")
                 .foregroundStyle(.secondary)
 
             Button {
@@ -281,7 +281,7 @@ struct OnboardingView: View {
             Text("设置完成，已进入可用状态。")
                 .font(.title3.weight(.semibold))
 
-            FeatureLine(icon: "waveform", title: "输入逻辑", desc: "按住说话，松开结束。双击快捷键进入连续模式，再按一次结束。")
+            FeatureLine(icon: "waveform", title: "输入逻辑", desc: "按住说话，松开结束。")
             FeatureLine(icon: "brain.head.profile", title: "Thinking", desc: "停止输入后自动改写，并尝试直接注入当前焦点输入框。")
             FeatureLine(icon: "doc.on.doc", title: "无焦点兜底", desc: "如果没有可输入焦点，会弹出轻量复制按钮，防止内容丢失。")
         }
@@ -343,7 +343,7 @@ struct OnboardingView: View {
                 return nil
             }
 
-            let modifiers = event.modifierFlags.intersection([.option, .command, .control, .shift])
+            let modifiers = event.modifierFlags.intersection([.option, .command, .control, .shift, .function])
             let modifierFlags = HotkeyConfig.carbonFlags(from: modifiers)
             let keyCode = Int(event.keyCode)
             let validation = HotkeyConfig.validate(modifiers: modifierFlags, keyCode: keyCode)

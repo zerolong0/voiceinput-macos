@@ -15,6 +15,9 @@ struct HotkeyKeyOption: Identifiable {
 }
 
 enum HotkeyConfig {
+    static let functionModifierFlag = Int(kEventKeyModifierFnMask)
+    static let modifierMask = optionKey | cmdKey | controlKey | shiftKey | functionModifierFlag
+
     static let defaultModifiers = optionKey
     static let defaultKeyCode = 18
     static let defaultTerminalModifiers = optionKey
@@ -25,6 +28,7 @@ enum HotkeyConfig {
         HotkeyModifierOption(id: "command", title: "Command", carbonFlags: cmdKey),
         HotkeyModifierOption(id: "control", title: "Control", carbonFlags: controlKey),
         HotkeyModifierOption(id: "shift", title: "Shift", carbonFlags: shiftKey),
+        HotkeyModifierOption(id: "function", title: "Fn", carbonFlags: functionModifierFlag),
         HotkeyModifierOption(id: "option_command", title: "Option + Command", carbonFlags: optionKey | cmdKey),
         HotkeyModifierOption(id: "control_shift", title: "Control + Shift", carbonFlags: controlKey | shiftKey)
     ]
@@ -55,16 +59,39 @@ enum HotkeyConfig {
 
     static func modifierTitle(for flags: Int) -> String {
         if flags == 0 { return "无修饰键" }
-        return modifierOptions.first(where: { $0.carbonFlags == flags })?.title ?? "Flags \(flags)"
+        var parts: [String] = []
+        if flags & controlKey != 0 { parts.append("Control") }
+        if flags & optionKey != 0 { parts.append("Option") }
+        if flags & shiftKey != 0 { parts.append("Shift") }
+        if flags & cmdKey != 0 { parts.append("Command") }
+        if flags & functionModifierFlag != 0 { parts.append("Fn") }
+        if !parts.isEmpty { return parts.joined(separator: " + ") }
+        return "Flags \(flags)"
     }
 
     static func keyTitle(for keyCode: Int) -> String {
-        keyOptions.first(where: { $0.keyCode == keyCode })?.title ?? "KeyCode \(keyCode)"
+        if let mapped = keyOptions.first(where: { $0.keyCode == keyCode })?.title {
+            return mapped
+        }
+
+        // Common modifier key codes (left/right variants where applicable)
+        switch keyCode {
+        case 63: return "Fn"
+        case 55, 54: return "Command"
+        case 58, 61: return "Option"
+        case 59, 62: return "Control"
+        case 56, 60: return "Shift"
+        case 57: return "Caps Lock"
+        default: return "KeyCode \(keyCode)"
+        }
     }
 
     static func displayString(modifiers: Int, keyCode: Int) -> String {
         if modifiers == 0 {
             return keyTitle(for: keyCode)
+        }
+        if isModifierOnlyKeyCode(keyCode), let flag = modifierFlag(for: keyCode), (modifiers & flag) != 0 {
+            return modifierTitle(for: modifiers)
         }
         return "\(modifierTitle(for: modifiers)) + \(keyTitle(for: keyCode))"
     }
@@ -75,6 +102,7 @@ enum HotkeyConfig {
         if modifiers.contains(.command) { flags |= cmdKey }
         if modifiers.contains(.control) { flags |= controlKey }
         if modifiers.contains(.shift) { flags |= shiftKey }
+        if modifiers.contains(.function) { flags |= functionModifierFlag }
         return flags
     }
 
@@ -83,14 +111,22 @@ enum HotkeyConfig {
         [54, 55, 56, 57, 58, 59, 60, 61, 62, 63].contains(keyCode)
     }
 
+    static func modifierFlag(for keyCode: Int) -> Int? {
+        switch keyCode {
+        case 55, 54: return cmdKey
+        case 58, 61: return optionKey
+        case 59, 62: return controlKey
+        case 56, 60: return shiftKey
+        case 63: return functionModifierFlag
+        default: return nil
+        }
+    }
+
     static func validate(modifiers: Int, keyCode: Int) -> (isValid: Bool, message: String?) {
         if keyCode < 0 {
             return (false, "无效按键")
         }
-        if isModifierOnlyKeyCode(keyCode) {
-            return (false, "请搭配一个非修饰键（如 F6、Space、B 等）")
-        }
-        // 单键（无修饰键）直接通过，Carbon RegisterEventHotKey 支持单键注册
+        // 不限制组合，允许用户自行设置；注册冲突在运行时提示。
         return (true, nil)
     }
 }

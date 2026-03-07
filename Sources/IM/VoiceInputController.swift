@@ -107,12 +107,8 @@ class VoiceInputController: IMKInputController {
         hotKeyID.signature = OSType(0x564F4943) // "VOIC"
         hotKeyID.id = 1
 
-        let rawModifiers = defaults.object(forKey: SharedSettings.Keys.hotkeyModifiers) as? Int ?? OptionSetFlag.optionSpaceModifiers.rawValue
-        let rawKeyCode = defaults.object(forKey: SharedSettings.Keys.hotkeyKeyCode) as? Int ?? OptionSetFlag.spaceKeyCode.rawValue
-        let validation = HotkeyConfig.validate(modifiers: rawModifiers, keyCode: rawKeyCode)
-        let useFallback = !validation.isValid
-        let modifiers = UInt32(useFallback ? OptionSetFlag.optionSpaceModifiers.rawValue : rawModifiers)
-        let keyCode = UInt32(useFallback ? OptionSetFlag.spaceKeyCode.rawValue : rawKeyCode)
+        let modifiers = UInt32(defaults.object(forKey: SharedSettings.Keys.hotkeyModifiers) as? Int ?? OptionSetFlag.optionSpaceModifiers.rawValue)
+        let keyCode = UInt32(defaults.object(forKey: SharedSettings.Keys.hotkeyKeyCode) as? Int ?? OptionSetFlag.spaceKeyCode.rawValue)
 
         let status = RegisterEventHotKey(
             keyCode,
@@ -123,23 +119,8 @@ class VoiceInputController: IMKInputController {
             &Self.globalHotkeyRef
         )
         if status != noErr {
-            NSLog("VoiceInput: Hotkey register failed status=\(status), fallback to Option+Space")
-            var fallbackRef: EventHotKeyRef?
-            let fallbackStatus = RegisterEventHotKey(
-                UInt32(OptionSetFlag.spaceKeyCode.rawValue),
-                UInt32(OptionSetFlag.optionSpaceModifiers.rawValue),
-                hotKeyID,
-                GetApplicationEventTarget(),
-                0,
-                &fallbackRef
-            )
-            if fallbackStatus == noErr {
-                Self.globalHotkeyRef = fallbackRef
-                updateHotkeyRuntimeStatus("回退注册成功: Option + Space")
-            } else {
-                NSLog("VoiceInput: Fallback hotkey register also failed status=\(fallbackStatus)")
-                updateHotkeyRuntimeStatus("注册失败: status=\(status), fallback=\(fallbackStatus)")
-            }
+            NSLog("VoiceInput: Hotkey register failed status=\(status)")
+            updateHotkeyRuntimeStatus("注册失败（可能冲突）: status=\(status)")
         } else {
             NSLog("VoiceInput: Hotkey registered modifiers=\(modifiers) keyCode=\(keyCode)")
             updateHotkeyRuntimeStatus("已注册: \(formattedHotkey(modifiers: Int(modifiers), keyCode: Int(keyCode)))")
@@ -262,7 +243,10 @@ class VoiceInputController: IMKInputController {
         didAttemptRecognitionRecovery = false
         isVoiceInputActive = false
 
-        guard !capturedText.isEmpty else { return }
+        guard !capturedText.isEmpty else {
+            showErrorOverlay("未捕捉到麦克风输入，请检查麦克风权限、输入设备和环境噪声后重试。")
+            return
+        }
 
         // Always run local pipeline first so we have deterministic fallback.
         let localProcessed = textProcessor.process(capturedText)
@@ -285,9 +269,10 @@ class VoiceInputController: IMKInputController {
         let model = SharedSettings.defaults.string(forKey: SharedSettings.Keys.voiceInputModel) ?? "gemini-2.5-flash-lite"
         showThinkingOverlay(text: localProcessed)
 
+        let client = polishClient
         Task {
             do {
-                let polished = try await polishClient.polish(
+                let polished = try await client.polish(
                     text: localProcessed,
                     style: style,
                     model: model,
@@ -296,7 +281,7 @@ class VoiceInputController: IMKInputController {
                 )
                 DispatchQueue.main.async {
                     let finalText = polished.isEmpty ? localProcessed : polished
-                    self.deliverResult(
+                    VoiceInputController.activeController?.deliverResult(
                         originalText: capturedText,
                         processedText: localProcessed,
                         finalText: finalText,
@@ -306,7 +291,7 @@ class VoiceInputController: IMKInputController {
                 }
             } catch {
                 DispatchQueue.main.async {
-                    self.deliverResult(
+                    VoiceInputController.activeController?.deliverResult(
                         originalText: capturedText,
                         processedText: localProcessed,
                         finalText: localProcessed,
@@ -461,7 +446,7 @@ class VoiceInputController: IMKInputController {
     /// Insert text — try IMK client first, then AX API fallback
     private func insertText(_ text: String) -> Bool {
         // Primary: IMK client (synchronous / same app)
-        if let client = self.client() as? IMKTextInput {
+        if let client = self.client() {
             client.insertText(text, replacementRange: NSRange(location: NSNotFound, length: 0))
             return true
         }

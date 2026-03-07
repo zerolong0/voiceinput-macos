@@ -21,6 +21,7 @@ enum SharedSettings {
         static let llmRetryCount = "llmRetryCount"
         static let saveHistoryEnabled = "saveHistoryEnabled"
         static let muteExternalAudioDuringInput = "muteExternalAudioDuringInput"
+        static let preferredInputDeviceUID = "preferredInputDeviceUID"
         static let interactionSoundEnabled = "interactionSoundEnabled"
         static let launchAtLoginEnabled = "launchAtLoginEnabled"
         static let showInDockEnabled = "showInDockEnabled"
@@ -92,6 +93,9 @@ enum SharedSettings {
         }
         if defaults.object(forKey: Keys.muteExternalAudioDuringInput) == nil {
             defaults.set(true, forKey: Keys.muteExternalAudioDuringInput)
+        }
+        if defaults.string(forKey: Keys.preferredInputDeviceUID) == nil {
+            defaults.set("", forKey: Keys.preferredInputDeviceUID)
         }
         if defaults.object(forKey: Keys.interactionSoundEnabled) == nil {
             defaults.set(true, forKey: Keys.interactionSoundEnabled)

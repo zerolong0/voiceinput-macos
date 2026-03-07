@@ -300,7 +300,8 @@ struct TranscriptStreamBox: View {
                 .frame(height: 56)
                 .frame(maxWidth: 860)
                 .onChange(of: text) { _ in
-                    withAnimation(.easeOut(duration: 0.15)) {
+                    // Avoid animated scroll feedback loops during high-frequency transcript updates.
+                    DispatchQueue.main.async {
                         hProxy.scrollTo("end", anchor: .trailing)
                     }
                 }
